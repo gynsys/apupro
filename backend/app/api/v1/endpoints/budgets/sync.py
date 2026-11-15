@@ -269,7 +269,7 @@ def sync_budget_advanced(
             up_eq_deprec = bool(req.update_equipment_depreciation)
             up_eq_qty = False
             up_lab_jornal = True
-            up_lab_bonus = True
+            up_lab_bonus = False
             up_lab_crews = False
             up_par_perf = bool(req.update_partida_performance)
             up_par_fcas = bool(req.update_partida_fcas)
@@ -484,10 +484,10 @@ def sync_budget_advanced(
                     if req.fixed_labor_bonus is not None and req.fixed_labor_bonus >= 0:
                         lab.bono = float(req.fixed_labor_bonus)
                     elif up_lab_bonus and cat_lab["Bono"] > 0:
-                        # Las bases históricas pueden traer Bono=0 porque el
-                        # archivo de origen no lo incluye. No borrar el bono
-                        # que ya tenía el presupuesto en ese caso.
-                        lab.bono = cat_lab["Bono"]
+                        # Si el presupuesto original no tenía bono (bono == 0), no incorporarlo
+                        current_b = float(lab.bono or 0.0)
+                        if current_b > 0:
+                            lab.bono = cat_lab["Bono"]
                     updated_labors += 1
                 else:
                     if req.fixed_labor_bonus is not None and req.fixed_labor_bonus >= 0:

@@ -250,7 +250,7 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
         <div className="p-5 space-y-5 overflow-y-auto flex-1 text-xs sm:text-sm">
           
           {/* ============================================================== */}
-          {/* TAB 1: ACTUALIZACIÓN CON BASE DE DATOS (Maprex)                */}
+          {/* TAB 1: ACTUALIZACIÓN CON BASE DE DATOS                          */}
           {/* ============================================================== */}
           {activeTab === 'database' && (
             <div className="space-y-4">
@@ -283,367 +283,71 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
                   </select>
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Se sustituirán los valores de los insumos y partidas coincidentes con los de la base seleccionada.
+                  Se actualizarán los precios unitarios de los insumos coincidentes con la base seleccionada.
                 </span>
               </div>
 
-              {/* Modos rápidos (Presets) */}
-              <div className="space-y-2">
-                <label className="block font-bold text-slate-800 text-xs uppercase tracking-wider">
-                  Modo de Actualización:
-                </label>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Preset 1: Solo Precios */}
-                  <label
-                    className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                      presetMode === 'preset_prices'
-                        ? 'bg-blue-50/80 border-blue-400 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="presetMode"
-                      value="preset_prices"
-                      checked={presetMode === 'preset_prices'}
-                      onChange={() => {
-                        setPresetMode('preset_prices');
-                        setShowCustomOptions(false);
-                      }}
-                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                        <Sparkles size={14} className="text-amber-500" />
-                        Solo Precios de Insumos (Recomendado)
-                      </div>
-                      <p className="text-[11px] text-slate-600 m-0 mt-0.5 leading-snug">
-                        Actualiza únicamente precios unitarios, jornales y bonos. Rendimientos y cantidades permanecen intactos.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Preset 2: Precios + Factores */}
-                  <label
-                    className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                      presetMode === 'preset_factors'
-                        ? 'bg-blue-50/80 border-blue-400 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="presetMode"
-                      value="preset_factors"
-                      checked={presetMode === 'preset_factors'}
-                      onChange={() => {
-                        setPresetMode('preset_factors');
-                        setShowCustomOptions(false);
-                      }}
-                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                        <RefreshCw size={14} className="text-blue-600" />
-                        Precios + Depreciación Equipos
-                      </div>
-                      <p className="text-[11px] text-slate-600 m-0 mt-0.5 leading-snug">
-                        Actualiza precios y sincroniza los factores de depreciación / COP de maquinaria según la base.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Preset 3: Receta Completa */}
-                  <label
-                    className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                      presetMode === 'preset_full'
-                        ? 'bg-blue-50/80 border-blue-400 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="presetMode"
-                      value="preset_full"
-                      checked={presetMode === 'preset_full'}
-                      onChange={() => {
-                        setPresetMode('preset_full');
-                        setShowCustomOptions(false);
-                      }}
-                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                        <Layers size={14} className="text-purple-600" />
-                        Receta Técnica Completa
-                      </div>
-                      <p className="text-[11px] text-slate-600 m-0 mt-0.5 leading-snug">
-                        Reemplaza descripciones, rendimientos, consumos y composiciones de cuadrilla según la base.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Preset 4: Personalizado (Maprex Granular) */}
-                  <label
-                    className={`p-3 rounded-xl border cursor-pointer transition flex items-start gap-2.5 ${
-                      presetMode === 'custom'
-                        ? 'bg-blue-50/80 border-blue-400 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="presetMode"
-                      value="custom"
-                      checked={presetMode === 'custom'}
-                      onChange={() => {
-                        setPresetMode('custom');
-                        setShowCustomOptions(true);
-                      }}
-                      className="mt-0.5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div>
-                      <div className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                        <Sliders size={14} className="text-slate-700" />
-                        Personalizado (Opciones Maprex)
-                      </div>
-                      <p className="text-[11px] text-slate-600 m-0 mt-0.5 leading-snug">
-                        Control granular por casilla: fijar bonos uniformes, depreciaciones o consumos específicos.
-                      </p>
-                    </div>
-                  </label>
+              {/* Tarjeta única, clara y directa: Solo Precios de Insumos */}
+              <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200/90 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={16} className="text-amber-500 shrink-0" />
+                  <span className="font-extrabold text-xs sm:text-sm text-slate-900">
+                    Actualización Exclusiva de Precios de Insumos
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed m-0">
+                  Actualiza únicamente los precios unitarios vigentes de materiales, equipos y jornales básicos. Todo lo demás se conserva intacto:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-[11px] text-slate-700">
+                  <div className="flex items-center gap-2 p-2 bg-white/90 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-emerald-600 font-black text-xs">✓</span>
+                    <span><strong>Solo Precios:</strong> Materiales, equipos y jornales.</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white/90 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-emerald-600 font-black text-xs">✓</span>
+                    <span><strong>Rendimientos y Cantidades:</strong> 100% intactos.</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white/90 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-emerald-600 font-black text-xs">✓</span>
+                    <span><strong>Descripciones y Unidades:</strong> Sin alteraciones.</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-white/90 rounded-lg border border-blue-100 shadow-2xs">
+                    <span className="text-emerald-600 font-black text-xs">✓</span>
+                    <span><strong>Sin Bonos Inventados:</strong> Si el APU no tiene bono, se mantiene en 0.</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Panel de Correcciones Técnicas Opcionales */}
-              {presetMode !== 'custom' && presetMode !== 'preset_full' && (
-                <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
-                        <Wrench size={13} />
-                      </div>
-                      <span className="font-extrabold text-xs sm:text-sm text-amber-950">
-                        Correcciones Técnicas de Partidas y Equipos
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-200/70 text-amber-900 border border-amber-300/60">
-                      Opcional
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-amber-900/85 leading-relaxed m-0">
-                    Si este presupuesto tiene <strong>rendimientos alterados</strong> o <strong>depreciaciones de equipos modificadas</strong>, marca estas casillas para corregirlos de una vez con los valores normativos de la base:
-                  </p>
-
-                  <div className="space-y-2 pt-0.5">
-                    {/* Checkbox Rendimientos */}
-                    <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition cursor-pointer ${
-                      correctPerformance
-                        ? 'bg-amber-100/70 border-amber-300 ring-1 ring-amber-400/50'
-                        : 'bg-white border-amber-200/60 hover:bg-white'
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={correctPerformance}
-                        onChange={(e) => setCorrectPerformance(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer shrink-0"
-                      />
-                      <div className="text-xs">
-                        <span className="font-extrabold text-slate-900 block">
-                          Corregir / Restaurar Rendimientos de Partidas
-                        </span>
-                        <span className="text-[11px] text-slate-600 block leading-tight mt-0.5">
-                          Sustituye los rendimientos diarios por los valores oficiales del catálogo (corrige partidas con rendimientos alterados o no estándar).
-                        </span>
-                      </div>
-                    </label>
-
-                    {/* Checkbox Depreciación Equipos */}
-                    {presetMode !== 'preset_factors' && (
-                      <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition cursor-pointer ${
-                        correctDepreciation
-                          ? 'bg-amber-100/70 border-amber-300 ring-1 ring-amber-400/50'
-                          : 'bg-white border-amber-200/60 hover:bg-white'
-                      }`}>
-                        <input
-                          type="checkbox"
-                          checked={correctDepreciation}
-                          onChange={(e) => setCorrectDepreciation(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer shrink-0"
-                        />
-                        <div className="text-xs">
-                          <span className="font-extrabold text-slate-900 block">
-                            Corregir / Restaurar Factores de Depreciación (COP) de Equipos
-                          </span>
-                          <span className="text-[11px] text-slate-600 block leading-tight mt-0.5">
-                            Aplica los factores de depreciación oficiales de la base (corrige maquinaria y herramientas con depreciación en 0.00 o alterada).
-                          </span>
-                        </div>
-                      </label>
-                    )}
-
-                    {/* Checkbox Descripciones y Unidades */}
-                    <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition cursor-pointer ${
-                      correctDescription
-                        ? 'bg-amber-100/70 border-amber-300 ring-1 ring-amber-400/50'
-                        : 'bg-white border-amber-200/60 hover:bg-white'
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={correctDescription}
-                        onChange={(e) => setCorrectDescription(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer shrink-0"
-                      />
-                      <div className="text-xs">
-                        <span className="font-extrabold text-slate-900 block">
-                          Homologar Descripciones y Unidades COVENIN
-                        </span>
-                        <span className="text-[11px] text-slate-600 block leading-tight mt-0.5">
-                          Restaura la redacción y unidad de medida oficial de las partidas según el catálogo normativo.
-                        </span>
-                      </div>
-                    </label>
-                  </div>
+              {/* Opciones avanzadas discretas (Colapsadas por defecto para no saturar) */}
+              <details className="group border border-slate-200 rounded-xl bg-slate-50/60 overflow-hidden text-xs">
+                <summary className="p-3 font-bold text-slate-700 cursor-pointer hover:bg-slate-100 flex items-center justify-between select-none transition">
+                  <span className="flex items-center gap-1.5 text-slate-600">
+                    <Sliders size={13} className="text-slate-400" />
+                    Opciones técnicas avanzadas (Opcional)
+                  </span>
+                  <span className="text-[10px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-3.5 border-t border-slate-200 space-y-2.5 bg-white">
+                  <label className="flex items-start gap-2 cursor-pointer font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={correctPerformance}
+                      onChange={(e) => setCorrectPerformance(e.target.checked)}
+                      className="mt-0.5 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
+                    />
+                    <span>Sustituir rendimientos de partidas por los valores de la base (por defecto desactivado)</span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={correctDepreciation}
+                      onChange={(e) => setCorrectDepreciation(e.target.checked)}
+                      className="mt-0.5 rounded text-blue-600 border-slate-300 focus:ring-blue-500"
+                    />
+                    <span>Sincronizar factores de depreciación / COP de equipos (por defecto desactivado)</span>
+                  </label>
                 </div>
-              )}
-
-              {/* Panel Personalizado (Maprex Granular) */}
-              {presetMode === 'custom' && (
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3.5 text-xs">
-                  <div className="font-extrabold text-slate-900 uppercase tracking-wider text-[11px]">
-                    Selección Granular de Rubros:
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Partidas */}
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5">
-                      <span className="font-bold text-blue-900 block border-b pb-1">
-                        Partidas
-                      </span>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_partida_performance}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_partida_performance', e.target.checked)
-                          }
-                        />
-                        <span>Actualizar Rendimiento</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_partida_desc}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_partida_desc', e.target.checked)
-                          }
-                        />
-                        <span>Descripción y Unidad COVENIN</span>
-                      </label>
-                    </div>
-
-                    {/* Materiales */}
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5">
-                      <span className="font-bold text-amber-900 block border-b pb-1">
-                        Materiales
-                      </span>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_material_prices}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_material_prices', e.target.checked)
-                          }
-                        />
-                        <span>Precios Unitarios</span>
-                      </label>
-                    </div>
-
-                    {/* Equipos */}
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5">
-                      <span className="font-bold text-indigo-900 block border-b pb-1">
-                        Equipos
-                      </span>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_equipment_prices}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_equipment_prices', e.target.checked)
-                          }
-                        />
-                        <span>Costo Diario / Alquiler</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_equipment_depreciation}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_equipment_depreciation', e.target.checked)
-                          }
-                        />
-                        <span>Factor COP / Depreciación</span>
-                      </label>
-                    </div>
-
-                    {/* Mano de Obra */}
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5">
-                      <span className="font-bold text-emerald-900 block border-b pb-1">
-                        Mano de Obra
-                      </span>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_labor_jornal}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_labor_jornal', e.target.checked)
-                          }
-                        />
-                        <span>Jornal Básico (Tabulador)</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={customOptions.update_labor_bonus}
-                          onChange={(e) =>
-                            handleCustomOptionChange('update_labor_bonus', e.target.checked)
-                          }
-                        />
-                        <span>Bono de Asistencia de la Base</span>
-                      </label>
-
-                      <div className="pt-1 border-t border-slate-100 space-y-1">
-                        <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={customOptions.enable_fixed_bonus}
-                            onChange={(e) =>
-                              handleCustomOptionChange('enable_fixed_bonus', e.target.checked)
-                            }
-                          />
-                          <span>Fijar Bono Uniforme para todos:</span>
-                        </label>
-                        {customOptions.enable_fixed_bonus && (
-                          <div className="flex items-center gap-2 pl-5 pt-0.5">
-                            <span className="font-bold text-slate-600">$</span>
-                            <DecimalInput
-                              value={customOptions.fixed_labor_bonus}
-                              onChange={(val) =>
-                                handleCustomOptionChange('fixed_labor_bonus', val)
-                              }
-                              placeholder="0.00"
-                              className="w-24 px-2 py-1 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none"
-                            />
-                            <span className="text-[11px] text-slate-500">/ día</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              </details>
             </div>
           )}
 
