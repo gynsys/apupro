@@ -62,7 +62,7 @@ export default function ImportMdbDatabaseTab({ onSuccess, onClose }) {
         .replace(/_/g, ' ')
         .replace(/bdd|maprex|base/gi, '')
         .trim();
-      setDbName(cleanStem ? `Base ${cleanStem.charAt(0).toUpperCase() + cleanStem.slice(1)}` : 'Base Maprex');
+      setDbName(cleanStem ? `Base ${cleanStem.charAt(0).toUpperCase() + cleanStem.slice(1)}` : 'Base de Costos');
     }
   };
 
@@ -94,8 +94,8 @@ export default function ImportMdbDatabaseTab({ onSuccess, onClose }) {
         onSuccess(result);
       }
     } catch (err) {
-      console.error('Error importando base de datos Maprex:', err);
-      setError(err.message || 'Ocurrió un error al procesar el archivo Maprex.');
+      console.error('Error importando base de datos:', err);
+      setError(err.message || 'Ocurrió un error al procesar el archivo.');
       toast.error(err.message || 'Error en la importación');
     } finally {
       setLoading(false);
@@ -201,7 +201,7 @@ export default function ImportMdbDatabaseTab({ onSuccess, onClose }) {
                   <Upload size={24} />
                 </div>
                 <p className="text-sm font-bold text-slate-800">
-                  Arrastra tu archivo Maprex o haz clic aquí
+                  Arrastra tu archivo de base de datos o haz clic aquí
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
                   Formatos soportados: <strong>.MDB, .ACCDB, .PRX o .ZIP</strong> (Hasta 150 MB)
@@ -244,7 +244,7 @@ export default function ImportMdbDatabaseTab({ onSuccess, onClose }) {
                 type="text"
                 value={dbName}
                 onChange={(e) => setDbName(e.target.value)}
-                placeholder="Ej. Base Maprex Junio 2026 - Dólares"
+                placeholder="Ej. Base Noviembre 2026 - Dólares"
                 required
                 className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm text-slate-800 bg-white outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all"
               />
@@ -257,7 +257,7 @@ export default function ImportMdbDatabaseTab({ onSuccess, onClose }) {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ej. Catálogo oficial de costos y análisis APU importado desde Maprex"
+                placeholder="Ej. Catálogo oficial de costos, insumos y análisis de precios unitarios"
                 rows={2}
                 className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm text-slate-800 bg-white outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 transition-all resize-none"
               />

@@ -163,7 +163,7 @@ def _generate_clean_schema_id(db: Session, base_name: str) -> str:
     """Genera un nombre de esquema PostgreSQL válido y no existente."""
     clean_slug = re.sub(r'[^a-z0-9_]', '', base_name.lower().replace(' ', '_').replace('-', '_'))
     if not clean_slug:
-        clean_slug = "maprex_base"
+        clean_slug = "cost_base"
     if not clean_slug.startswith("base_"):
         clean_slug = f"base_{clean_slug}"
     # Truncar slug base a un tamaño seguro
@@ -300,7 +300,7 @@ def _populate_from_tables(
     if not has_obra_format and not has_bdd_format:
         available = ", ".join(tables.keys())
         raise MdbDatabaseImportError(
-            f"El archivo no contiene tablas reconocidas de Maprex. Tablas halladas: {available or 'ninguna'}"
+            f"El archivo no contiene tablas reconocidas de base de datos. Tablas halladas: {available or 'ninguna'}"
         )
 
     counts = {
@@ -976,7 +976,7 @@ def create_costbase_from_tables(
         create_costbase_schema_indexes(db, schema_name)
 
         # 4. Registrar en cost360_databases
-        clean_desc = (description or f"Base de datos importada desde Maprex Access. Creada por {user_email}").strip()
+        clean_desc = (description or "Base de datos oficial de costos, insumos y análisis de precios unitarios").strip()
         now = datetime.now(timezone.utc)
         record = Cost360Database(
             id=schema_name,
@@ -987,7 +987,7 @@ def create_costbase_from_tables(
             material_inflation=0.0,
             labor_inflation=0.0,
             equipment_inflation=0.0,
-            source_database_id="maprex_import",
+            source_database_id="import",
             created_by=user_email,
             owner_id=user_email,
             is_published=is_published,
