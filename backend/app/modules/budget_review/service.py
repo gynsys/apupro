@@ -1027,7 +1027,7 @@ def audit_uploaded_file(
         raise ValueError("El nombre del archivo es requerido.")
 
     clean_mode = (import_mode or "budget").strip().lower()
-    if clean_mode not in {"apu_workbook", "budget", "compute_notes"}:
+    if clean_mode not in {"apu_workbook", "budget"}:
         clean_mode = "budget"
     _resolve_schema_name(db, database_id)
     preview = build_preview(file_bytes, filename, db, mode=clean_mode)

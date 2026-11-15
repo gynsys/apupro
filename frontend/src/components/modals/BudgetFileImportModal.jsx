@@ -423,7 +423,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
 
           {/* Modo de importación */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => handleModeChange('budget')}
@@ -450,18 +450,6 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                 Libro de APUs (Excel)
               </span>
               <span className="block text-[10px] opacity-75 mt-0.5">Hojas con APUs (Materiales, Equipos, M.O.)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange('compute_notes')}
-              className={`text-left rounded-xl border px-3 py-2.5 transition-colors cursor-pointer ${
-                importMode === 'compute_notes'
-                  ? 'border-sky-500 bg-sky-50 text-sky-900 shadow-sm'
-                  : 'border-amber-600/15 bg-white/70 text-amber-900 hover:bg-white'
-              }`}
-            >
-              <span className="block text-xs font-bold">Apuntes de cómputos</span>
-              <span className="block text-[10px] opacity-75 mt-0.5">Foto o PDF con descripción y medidas</span>
             </button>
           </div>
 
