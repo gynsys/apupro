@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 
 // Ajusta aquí el precio y los créditos del plan IA sin tocar el diseño.
 const AI_MONTHLY_PRICE = '9.99';
-const AI_MONTHLY_CREDITS = '30';
+const AI_MONTHLY_APUS = '30';
 
 export default function PricingSection({ onRegisterClick }) {
   const plans = [
@@ -36,8 +36,8 @@ export default function PricingSection({ onRegisterClick }) {
         'Auditoría de presupuestos con IA',
         'Importación desde PDF/Excel con IA',
         'Actualización de precios',
-        `${AI_MONTHLY_CREDITS} créditos de IA al mes`,
-        'Compra de créditos adicionales',
+        `${AI_MONTHLY_APUS} APUs generados con IA al mes`,
+        'Compra de APUs adicionales',
         'Soporte técnico',
       ],
       buttonText: 'Activar IA',
@@ -112,8 +112,8 @@ export default function PricingSection({ onRegisterClick }) {
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-8 max-w-2xl mx-auto">
-          El Plan Free no consume créditos de IA. Las funciones con IA del Plan IA
-          consumen créditos según el trabajo realizado.
+          El Plan Free no consume APUs de IA. Las funciones con IA del Plan IA
+          consumen APUs según el trabajo realizado.
         </p>
       </div>
     </div>
