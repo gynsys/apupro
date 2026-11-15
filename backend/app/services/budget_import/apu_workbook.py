@@ -27,7 +27,7 @@ _UNIT_MAP = {
     "kg": "kg", "kgs": "kg", "kgf": "kgf", "kilogramo": "kg", "kilos": "kg",
     "ton": "ton", "tonf": "ton", "tonelada": "ton", "sco": "sco", "saco": "sco",
     "gal": "gal", "gln": "gal", "lt": "lt", "l": "lt", "litro": "lt",
-    "dia": "día", "día": "día", "dias": "día", "hr": "hr", "hora": "hr",
+    "dia": "día", "día": "día", "dias": "día", "días": "día", "xdia": "día", "xdía": "día", "x dia": "día", "x día": "día", "por dia": "día", "por día": "día", "x/dia": "día", "hr": "hr", "hora": "hr",
     "gl": "gl", "global": "gl", "pto": "pto", "punto": "pto",
     "m3-km": "m3-km", "m3 km": "m3-km", "ton-km": "ton-km", "viaje": "viaje",
 }

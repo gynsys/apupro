@@ -86,7 +86,7 @@ _UNIT_NORMALIZATION = {
     "sco": "sco", "saco": "sco", "sacos": "sco", "bolsa": "sco",
     "gal": "gal", "gln": "gal", "galon": "gal", "galones": "gal",
     "lt": "lt", "l": "lt", "litro": "lt", "litros": "lt",
-    "dia": "día", "día": "día", "dias": "día", "días": "día",
+    "dia": "día", "día": "día", "dias": "día", "días": "día", "xdia": "día", "xdía": "día", "x dia": "día", "x día": "día", "por dia": "día", "por día": "día", "x/dia": "día",
     "hr": "hr", "hora": "hr", "horas": "hr",
     "gl": "gl", "global": "gl", "suma global": "gl",
     "pto": "pto", "punto": "pto", "puntos": "pto",

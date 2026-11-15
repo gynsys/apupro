@@ -146,7 +146,7 @@ def _normalize_unit(unit_str: Optional[str]) -> str:
         "par": "par", "pares": "par",
         "jgo": "jgo", "juego": "jgo", "juegos": "jgo", "kit": "jgo",
         "pto": "pto", "punto": "pto", "puntos": "pto",
-        "dia": "dia", "día": "dia", "dias": "dia", "días": "dia",
+        "dia": "dia", "día": "dia", "dias": "dia", "días": "dia", "xdia": "dia", "xdía": "dia", "x dia": "dia", "x día": "dia", "por dia": "dia", "por día": "dia", "x/dia": "dia",
         "mes": "mes", "meses": "mes",
         "vje": "vje", "viaje": "vje", "viajes": "vje", "flete": "vje",
     }
