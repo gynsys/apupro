@@ -35,10 +35,15 @@ export default function BudgetWorksheetHeader({
           <div className="min-w-0 flex-1">
             <h1 
               className="text-[17px] font-bold text-slate-800 leading-tight truncate block max-w-full"
-              title={budget.project_name || budget.name}
+              title={budget.name || budget.project_name}
             >
-              {budget.project_name || budget.name}
+              {budget.name || budget.project_name}
             </h1>
+            {budget.project_name && budget.project_name !== budget.name && (
+              <span className="text-xs text-slate-500 font-medium leading-tight block truncate">
+                Obra: {budget.project_name}
+              </span>
+            )}
             <span className="text-[10px] text-slate-500 font-medium leading-tight block mt-0.5">
               Total Partidas: {itemsCount}
             </span>

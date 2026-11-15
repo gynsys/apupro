@@ -479,12 +479,19 @@ export default function BudgetHomePage() {
                 {/* Lado Principal / Superior: Título y Métricas */}
                 <div className="flex flex-col gap-2 w-full min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3 w-full">
-                    <h3 
-                      className="tarjeta-titulo-ambar font-bold text-base text-slate-800 group-hover:text-amber-900 transition-colors break-words line-clamp-2" 
-                      title={budget.project_name || budget.name || 'Presupuesto sin título'}
-                    >
-                      {budget.project_name || budget.name || 'Presupuesto sin título'}
-                    </h3>
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <h3 
+                        className="tarjeta-titulo-ambar font-bold text-base text-slate-800 group-hover:text-amber-900 transition-colors break-words line-clamp-2" 
+                        title={budget.name || budget.project_name || 'Presupuesto sin título'}
+                      >
+                        {budget.name || budget.project_name || 'Presupuesto sin título'}
+                      </h3>
+                      {budget.project_name && budget.project_name !== budget.name && (
+                        <p className="text-xs text-slate-500 line-clamp-1 italic">
+                          Obra: {budget.project_name}
+                        </p>
+                      )}
+                    </div>
                     
                     {/* Badge de Monto Móvil */}
                     {budgetTotals[budget.id] ? (
@@ -523,7 +530,7 @@ export default function BudgetHomePage() {
                 {/* Barra de Acciones Rápidas: En móvil se ubica abajo con borde separador; en desktop a la derecha */}
                 <div className="acciones-rapidas flex items-center justify-between md:justify-end gap-1 w-full md:w-auto shrink-0 pt-2.5 md:pt-0 border-t md:border-t-0 border-amber-200/60 overflow-x-auto no-scrollbar">
                   <button
-                    onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName((budget.project_name || budget.name || 'Presupuesto') + ' (Copia)'); }}
+                    onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName((budget.name || budget.project_name || 'Presupuesto') + ' (Copia)'); }}
                     className="btn-accion"
                     title="Duplicar"
                   >
@@ -565,7 +572,7 @@ export default function BudgetHomePage() {
                     <Share2 size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.project_name || budget.name || ''); }}
+                    onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name || budget.project_name || ''); }}
                     className="btn-accion"
                     title="Editar Nombre"
                   >
