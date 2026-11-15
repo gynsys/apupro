@@ -337,11 +337,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
         setCreating(false);
         return;
       }
-      const rawProject = (header.project_name || '').trim();
-      const defaultProject = (preview?.header?.project_name || '').trim();
-      const defaultBudget = (preview?.header?.budget_name || '').trim();
-      const shouldSyncProject = !rawProject || rawProject === defaultProject || rawProject === defaultBudget || rawProject === finalName;
-      const finalProject = shouldSyncProject ? finalName : rawProject;
+      const finalProject = (header.project_name || '').trim() || finalName;
 
       const result = await budgetService.commitImport({
         name: finalName,
@@ -539,22 +535,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                   <input
                     type="text"
                     value={header.budget_name}
-                    onChange={(event) => {
-                      const newName = event.target.value;
-                      setHeader((prev) => {
-                        const defaultProj = (preview?.header?.project_name || '').trim();
-                        const defaultBudg = (preview?.header?.budget_name || '').trim();
-                        const shouldSync = !prev.project_name ||
-                                           prev.project_name === prev.budget_name ||
-                                           prev.project_name === defaultProj ||
-                                           prev.project_name === defaultBudg;
-                        return {
-                          ...prev,
-                          budget_name: newName,
-                          project_name: shouldSync ? newName : prev.project_name,
-                        };
-                      });
-                    }}
+                    onChange={(event) => setHeader({ ...header, budget_name: event.target.value })}
                     className="px-3 py-2 border border-sky-200 rounded-xl text-xs text-slate-800 bg-white outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-700/10"
                   />
                 </label>

@@ -488,7 +488,8 @@ def extract_from_apu_workbook(data: bytes, filename: str) -> Dict[str, Any]:
     if not items:
         raise ValueError("No se encontraron hojas con estructura válida de APU en el libro de Excel.")
 
-    budget_name = global_obra or Path(filename or "").stem.replace("_", " ").title() or "Presupuesto APU Excel"
+    clean_stem = Path(filename or "").stem.replace("_", " ").title() if filename else None
+    budget_name = clean_stem or global_obra or "Presupuesto APU Excel"
 
     final_iva = global_iva if (global_iva is not None and global_iva >= 1.0) else 16.0
 
