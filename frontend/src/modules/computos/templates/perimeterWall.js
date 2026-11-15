@@ -93,7 +93,7 @@ export const DEFAULT_WALL_INPUT = {
   includeElectricFence: false,
 };
 
-function baseRow(key, chapter, description, unit, quantity, formula, observations = '') {
+function baseRow(key, chapter, description, unit, quantity, formula, observations = '', breakdown = []) {
   return {
     id: typeof crypto !== 'undefined' && crypto.randomUUID
       ? `macro-${crypto.randomUUID()}`
@@ -106,6 +106,7 @@ function baseRow(key, chapter, description, unit, quantity, formula, observation
     partial: round2(quantity),
     formula,
     observations,
+    breakdown,
     isDefaultQty: false,
   };
 }
@@ -206,9 +207,43 @@ export function calculatePerimeterWall(input = {}) {
 
   const blocks = netArea * blocksPerM2 * (1 + block.waste);
   const mortar = netArea * block.mortarPerM2;
-  rows.push(baseRow('wall', chapter, `Pared de ${block.label}`, 'M2', netArea, `Área bruta ${round2(grossArea)} - huecos ${round2(openingArea)}`, `Bloque: ${block.label} · espesor ${block.thickness * 100} cm`));
-  rows.push(baseRow('blocks', chapter, 'Bloques de concreto o arcilla', 'UND', blocks, `Área neta × ${round4(blocksPerM2)} und/m2 × (1 + ${block.waste * 100}%)`, `Incluye junta de ${joint * 100} cm`));
-  rows.push(baseRow('mortar', chapter, 'Mortero de pega para pared', 'M3', mortar, `Área neta × ${block.mortarPerM2} m3/m2`));
+  const wallBreakdown = [
+    {
+      label: 'Área bruta',
+      expression: `${round2(length)} m × ${round2(height)} m`,
+      value: `${round2(grossArea)} m²`,
+    },
+    {
+      label: 'Huecos',
+      expression: `portón ${round2(gateArea)} m² + ventanas ${round2(windowArea)} m²`,
+      value: `${round2(openingArea)} m²`,
+    },
+    {
+      label: 'Área neta',
+      expression: `${round2(grossArea)} m² − ${round2(openingArea)} m²`,
+      value: `${round2(netArea)} m²`,
+    },
+    {
+      label: 'Bloques',
+      expression: `${round2(netArea)} m² × ${round4(blocksPerM2)} und/m² × (1 + ${block.waste * 100} %)`,
+      value: `${round2(blocks)} und`,
+    },
+    {
+      label: 'Mortero',
+      expression: `${round2(netArea)} m² × ${block.mortarPerM2} m³/m²`,
+      value: `${round2(mortar)} m³`,
+    },
+  ];
+  rows.push(baseRow(
+    'wall',
+    chapter,
+    `Pared de ${block.label}`,
+    'M2',
+    netArea,
+    `Área bruta ${round2(grossArea)} − huecos ${round2(openingArea)}`,
+    'Incluye bloques y mortero de pega; el desglose queda en la fila.',
+    wallBreakdown,
+  ));
 
   if (Number(data.frisoSides) > 0) {
     const friso = netArea * Number(data.frisoSides);

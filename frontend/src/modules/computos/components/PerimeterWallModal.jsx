@@ -259,6 +259,21 @@ export default function PerimeterWallModal({ isOpen, onClose, onApply, initialIn
                           className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold hover:border-amber-300 focus:border-amber-500 focus:bg-white focus:outline-none"
                         />
                         <div className="px-1 text-[10px] text-amber-700">{row.formula}</div>
+                        {row.breakdown?.length > 0 && (
+                          <details className="mx-1 mt-1 rounded border border-amber-300 bg-amber-50/70 px-1.5 py-1 text-[10px] text-amber-900">
+                            <summary className="cursor-pointer font-bold select-none">
+                              🧮 Desglose del cómputo
+                            </summary>
+                            <div className="mt-1 space-y-0.5 font-mono">
+                              {row.breakdown.map((line) => (
+                                <div key={`${row.key}-${line.label}`}>
+                                  <span className="font-bold">{line.label}:</span>{' '}
+                                  {line.expression} <span className="font-bold">= {line.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-right font-mono font-bold text-amber-950">{row.quantity.toLocaleString('es-VE', { maximumFractionDigits: 2 })}</td>
                       <td className="px-2 py-2 text-center">

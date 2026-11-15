@@ -289,6 +289,22 @@ function ComputosTableRow({
                                     <span>{cleanFormulaDisplay(it.formula)}</span>
                                   </div>
                                 )}
+                                {Array.isArray(it.breakdown) && it.breakdown.length > 0 && !isBlankTrailing && (
+                                  <details className="mt-0.5 rounded border border-amber-300 bg-amber-50/80 px-2 py-1 text-[10px] text-amber-950">
+                                    <summary className="cursor-pointer font-bold text-amber-900 select-none">
+                                      🧮 Desglose del cómputo ({it.breakdown.length})
+                                    </summary>
+                                    <div className="mt-1 space-y-0.5 font-mono">
+                                      {it.breakdown.map((line, lineIdx) => (
+                                        <div key={`${it.id}-breakdown-${lineIdx}`} className="flex flex-wrap items-baseline gap-x-1.5">
+                                          <span className="font-bold">{line.label}:</span>
+                                          <span className="text-amber-800">{line.expression}</span>
+                                          <span className="font-bold">= {line.value}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                )}
                                 {it.linkedTo && (
                                   <div className="flex items-center gap-1.5 px-2 py-0.5 mt-0.5 rounded-md bg-sky-100 border border-sky-300 text-[10px] font-semibold text-sky-900 w-fit">
                                     <Link2 className="w-3 h-3 text-sky-700 shrink-0" />
