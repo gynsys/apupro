@@ -36,7 +36,8 @@ def _finalize_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
         code = str(raw.get("code") or "").strip()
         cov_par = str(raw.get("cov_par") or "").strip()
-        key = ("code", code) if code else (description.lower(), unit, round(quantity, 3), is_chapter)
+        # Clave única para evitar duplicados reales sin descartar partidas legítimas que comparten código (ej. S/C)
+        key = (code.lower(), description.lower(), unit.lower(), round(quantity, 4), is_chapter)
         if key in seen:
             continue
         seen.add(key)

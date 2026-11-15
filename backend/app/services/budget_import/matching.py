@@ -147,7 +147,7 @@ def find_candidates(
             "cov_par": row.CovPar,
             "description": row.Descri or "",
             "unit": row.UniPar or "",
-            "_raw_score": 1.0,
+            "_raw_score": 2.5,
             "match_type": "code",
         }
 
@@ -248,7 +248,7 @@ def find_candidates(
 
     ordered = sorted(
         candidates.values(),
-        key=lambda candidate: (candidate["_raw_score"], candidate["match_type"] == "code"),
+        key=lambda candidate: (1 if candidate.get("match_type") == "code" else 0, candidate.get("_raw_score", 0.0)),
         reverse=True,
     )[:limit]
 
