@@ -3,7 +3,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
-  Settings, Printer, FileSpreadsheet, CloudDownload, Upload,
+  Settings, Printer, FileSpreadsheet, CloudDownload, Upload, UploadCloud,
   MoreVertical, Clock, DollarSign, Loader, Share2, Link2, Database
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -16,6 +16,8 @@ import SubscriptionRequestModal from '../../components/SubscriptionRequestModal'
 import ShareBudgetModal from '../../components/modals/ShareBudgetModal';
 import ImportSharedBudgetModal from '../../components/modals/ImportSharedBudgetModal';
 import ImportMdbModal from '../../modules/mdb_import/components/ImportMdbModal.jsx';
+import BudgetImportChoiceModal from '../../components/modals/BudgetImportChoiceModal';
+import BudgetFileImportModal from '../../components/modals/BudgetFileImportModal';
 import { calculateItemPU, calculateBudgetTotals } from '../../utils/apuCalculations';
 
 const CURRENCY_FORMATTER = new Intl.NumberFormat('es-VE', {
@@ -64,6 +66,10 @@ export default function BudgetHomePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportChoiceOpen, setIsImportChoiceOpen] = useState(false);
+  const [isBudgetImportModalOpen, setIsBudgetImportModalOpen] = useState(false);
+  const [budgetImportFile, setBudgetImportFile] = useState(null);
+  const [budgetImportMode, setBudgetImportMode] = useState('budget');
   const [isMdbImportOpen, setIsMdbImportOpen] = useState(false);
   const [importingBackup, setImportingBackup] = useState(false);
   const [sharingBudget, setSharingBudget] = useState(null);
@@ -135,6 +141,13 @@ export default function BudgetHomePage() {
       setLoading(false);
     }
   }, [budgets.length]);
+
+  const handleImportChoice = (selectedFile, mode) => {
+    setIsImportChoiceOpen(false);
+    setBudgetImportMode(mode || 'budget');
+    setBudgetImportFile(selectedFile);
+    setIsBudgetImportModalOpen(true);
+  };
 
   useEffect(() => {
     loadBudgets(Boolean(initialCached));
@@ -384,13 +397,23 @@ export default function BudgetHomePage() {
               <p className="text-slate-500 mt-1">Administra, crea y organiza todos tus proyectos</p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
-              {/* Botón Primario a ancho completo en móvil */}
+              {/* Botón Nuevo */}
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto"
+                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto cursor-pointer"
               >
                 <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
-                Nuevo Presupuesto
+                Nuevo
+              </button>
+
+              {/* Botón Desde Archivos */}
+              <button
+                onClick={() => setIsImportChoiceOpen(true)}
+                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-sky-600/20 hover:shadow-lg hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto cursor-pointer"
+                title="Importar presupuesto desde archivo (Excel, APU, etc.)"
+              >
+                <UploadCloud size={20} className="group-hover:scale-110 transition-transform duration-300" />
+                Desde Archivos
               </button>
 
               {isSuperAdmin && (
@@ -877,6 +900,36 @@ export default function BudgetHomePage() {
           }}
         />
       )}
+
+      {/* Modales de Importación desde Archivo */}
+      <BudgetImportChoiceModal
+        isOpen={isImportChoiceOpen}
+        onClose={() => setIsImportChoiceOpen(false)}
+        onSelectMode={handleImportChoice}
+      />
+
+      <BudgetFileImportModal
+        isOpen={isBudgetImportModalOpen}
+        file={budgetImportFile}
+        initialMode={budgetImportMode}
+        onClose={() => {
+          setIsBudgetImportModalOpen(false);
+          setBudgetImportFile(null);
+        }}
+        onCreated={(budgetId) => {
+          setIsBudgetImportModalOpen(false);
+          setBudgetImportFile(null);
+          loadBudgets();
+          if (budgetId) {
+            navigate(`/budgets/${budgetId}`);
+          }
+        }}
+        onShowPlans={() => {
+          setIsBudgetImportModalOpen(false);
+          setLimitType('budget');
+          setShowSubscriptionModal(true);
+        }}
+      />
       </div>
     </div>
   );

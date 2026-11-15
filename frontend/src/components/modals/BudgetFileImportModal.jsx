@@ -93,7 +93,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
       const finalIva = (rawIva !== undefined && rawIva !== null && Number(rawIva) >= 1) ? Number(rawIva) : 16.0;
       setHeader({
         budget_name: detectedName,
-        project_name: detectedProject || detectedName,
+        project_name: detectedProject,
         client_name: data.header?.client_name || '',
         currency: data.header?.currency || 'USD',
         fcas_percent: data.header?.fcas_percent,
