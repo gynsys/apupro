@@ -256,6 +256,18 @@ export const getMasterItems = async (limit = 10000, search = '', database_id = '
   return await fetchItems(0, limit, search, '', database_id, true, false, covenin, only_coded);
 };
 
+export const getGlobalAiEngineMode = async () => {
+  const response = await cost360ApiClient.get('/ai-engine-mode');
+  return response.data;
+};
+
+export const setGlobalAiEngineMode = async (generationMode) => {
+  const response = await cost360ApiClient.put('/ai-engine-mode', {
+    generation_mode: generationMode,
+  });
+  return response.data;
+};
+
 const costbaseService = {
   fetchItems,
   fetchApuDetails,
@@ -269,7 +281,9 @@ const costbaseService = {
   updateMasterItem,
   deleteMasterItem,
   exportApuExcelCustom,
-  getMasterItems
+  getMasterItems,
+  getGlobalAiEngineMode,
+  setGlobalAiEngineMode
 };
 
 export const cost360Service = costbaseService;

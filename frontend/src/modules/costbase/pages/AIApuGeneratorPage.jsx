@@ -38,10 +38,7 @@ export default function AIApuGeneratorPage() {
   const isSuperAdmin = Boolean(
     user?.is_superadmin === true ||
     user?.email === 'admin@arko360.net' ||
-    user?.role === 'superadmin' ||
-    user?.is_admin === true ||
-    user?.role === 'admin' ||
-    user
+    user?.role === 'superadmin'
   );
   const { costosConfig, updateCostosConfig } = useUserCostos();
 
@@ -558,7 +555,7 @@ export default function AIApuGeneratorPage() {
               handleGoBack={guided.handleGoBack}
               isSuperAdmin={isSuperAdmin}
               generationMode={generator.generationMode}
-              setGenerationMode={generator.setGenerationMode}
+              setGenerationMode={generator.updateGenerationMode || generator.setGenerationMode}
               useTypesafeJev={generator.useTypesafeJev}
               setUseTypesafeJev={generator.setUseTypesafeJev}
               waitingForGlobalDays={guided.waitingForGlobalDays}

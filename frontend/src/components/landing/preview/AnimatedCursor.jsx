@@ -5,7 +5,7 @@ export default function AnimatedCursor({ position, visible, clicking }) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute z-[80] hidden transition-all duration-500 ease-in-out sm:block"
+      className="pointer-events-none absolute z-[80] hidden transition-all duration-300 ease-out sm:block"
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
@@ -31,10 +31,10 @@ export default function AnimatedCursor({ position, visible, clicking }) {
       {clicking && (
         <motion.span
           key="click-ripple"
-          className="absolute -left-2 -top-2 h-9 w-9 rounded-full border-2 border-blue-500"
-          initial={{ scale: 0.35, opacity: 0.9 }}
-          animate={{ scale: 1.8, opacity: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="absolute -left-3.5 -top-3.5 h-9 w-9 rounded-full border-2 border-blue-500"
+          initial={{ scale: 0.35, opacity: 0 }}
+          animate={{ scale: 1.8, opacity: [0, 0.9, 0] }}
+          transition={{ duration: 0.45, delay: 0.22, ease: 'easeOut' }}
         />
       )}
     </div>

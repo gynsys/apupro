@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-motion';
 import DemoChrome from './DemoChrome';
 import AnimatedCursor from './AnimatedCursor';
@@ -9,17 +9,24 @@ import ApuScreen from './screens/ApuScreen';
 
 const PHASES = [
   { id: 'budgets', duration: 2400 },
-  { id: 'budget-click', duration: 600 },
+  { id: 'budget-click', duration: 750 },
   { id: 'partidas', duration: 2600 },
   { id: 'partidas-scroll', duration: 1400 },
-  { id: 'partida-click', duration: 600 },
+  { id: 'partida-click', duration: 750 },
   { id: 'apu', duration: 2600 },
   { id: 'apu-scroll', duration: 1400 },
-  { id: 'export-click', duration: 700 },
+  { id: 'export-click', duration: 750 },
   { id: 'modal', duration: 2200 },
-  { id: 'close-click', duration: 650 },
+  { id: 'close-click', duration: 750 },
   { id: 'rewind', duration: 900 },
 ];
+
+const CURSOR_TARGETS = {
+  'budget-click': 'budget-1',
+  'partida-click': 'partida-gear',
+  'export-click': 'export',
+  'close-click': 'close',
+};
 
 const CURSOR_POSITIONS = {
   budgets: { x: 72, y: 26 },
@@ -48,13 +55,57 @@ export default function AnimatedPreview() {
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [manualModal, setManualModal] = useState(false);
   const [modalDismissed, setModalDismissed] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState(CURSOR_POSITIONS.budgets);
   const containerRef = useRef(null);
+  const stageRef = useRef(null);
   const isInView = useInView(containerRef, { amount: 0.35 });
 
   const phase = PHASES[phaseIndex].id;
   const screen = screenForPhase(phase);
   const showModal = !modalDismissed && (manualModal || phase === 'modal' || phase === 'close-click');
-  const cursorPosition = CURSOR_POSITIONS[phase];
+
+  const updateCursorPosition = useCallback(() => {
+    const fallback = CURSOR_POSITIONS[phase];
+    const targetName = CURSOR_TARGETS[phase];
+    const stageEl = stageRef.current;
+
+    if (!targetName || !stageEl) {
+      setCursorPosition(fallback);
+      return;
+    }
+
+    const targetEl = stageEl.querySelector(`[data-demo-target="${targetName}"]`);
+    if (!targetEl) {
+      setCursorPosition(fallback);
+      return;
+    }
+
+    const stageRect = stageEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    if (stageRect.width === 0 || stageRect.height === 0) {
+      setCursorPosition(fallback);
+      return;
+    }
+
+    const x = ((targetRect.left + targetRect.width / 2 - stageRect.left - 2) / stageRect.width) * 100;
+    const y = ((targetRect.top + targetRect.height / 2 - stageRect.top - 2) / stageRect.height) * 100;
+    setCursorPosition({ x, y });
+  }, [phase]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(updateCursorPosition);
+    const stageEl = stageRef.current;
+    if (!stageEl || typeof ResizeObserver === 'undefined') {
+      return () => window.cancelAnimationFrame(frameId);
+    }
+
+    const observer = new ResizeObserver(updateCursorPosition);
+    observer.observe(stageEl);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      observer.disconnect();
+    };
+  }, [updateCursorPosition]);
 
   useEffect(() => {
     if (!isInView) setPhaseIndex(0);
@@ -108,36 +159,38 @@ export default function AnimatedPreview() {
   return (
     <div ref={containerRef} className="relative">
       <DemoChrome>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={screen}
-            className="absolute inset-0"
-            initial={{ opacity: 0, x: phase === 'rewind' ? -140 : 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: phase === 'rewind' ? 140 : -16 }}
-            transition={{ duration: phase === 'rewind' ? 0.55 : 0.38, ease: 'easeInOut' }}
-          >
-            {screenContent}
-          </motion.div>
-        </AnimatePresence>
+        <div ref={stageRef} className="relative h-full w-full">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={screen}
+              className="absolute inset-0"
+              initial={{ opacity: 0, x: phase === 'rewind' ? -140 : 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: phase === 'rewind' ? 140 : -16 }}
+              transition={{ duration: phase === 'rewind' ? 0.55 : 0.38, ease: 'easeInOut' }}
+            >
+              {screenContent}
+            </motion.div>
+          </AnimatePresence>
 
-        <AnimatePresence>
-          {showModal && (
-            <ExportModal
-              closeActive={phase === 'close-click'}
-              onClose={() => {
-                setManualModal(false);
-                setModalDismissed(true);
-              }}
-            />
-          )}
-        </AnimatePresence>
+          <AnimatePresence>
+            {showModal && (
+              <ExportModal
+                closeActive={phase === 'close-click'}
+                onClose={() => {
+                  setManualModal(false);
+                  setModalDismissed(true);
+                }}
+              />
+            )}
+          </AnimatePresence>
 
-        <AnimatedCursor
-          position={cursorPosition}
-          visible={phase !== 'rewind'}
-          clicking={CLICK_PHASES.has(phase)}
-        />
+          <AnimatedCursor
+            position={cursorPosition}
+            visible={phase !== 'rewind'}
+            clicking={CLICK_PHASES.has(phase)}
+          />
+        </div>
       </DemoChrome>
     </div>
   );

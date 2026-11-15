@@ -1,6 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { generateAIApu } from '../services/cost360Service';
+import {
+  generateAIApu,
+  getGlobalAiEngineMode,
+  setGlobalAiEngineMode
+} from '../services/cost360Service';
 import { saveDebugJsonFile } from '../../../utils/debugStorage';
 
 export function useApuGenerator({ setSettings }) {
@@ -47,12 +51,41 @@ export function useApuGenerator({ setSettings }) {
   });
   const [jevAnalysis, setJevAnalysis] = useState(null);
 
-  const updateGenerationMode = useCallback((mode) => {
+  useEffect(() => {
+    let active = true;
+    getGlobalAiEngineMode()
+      .then((data) => {
+        if (!active || !data?.generation_mode) return;
+        setGenerationMode(data.generation_mode);
+        try {
+          localStorage.setItem('cost360_superadmin_generation_mode', data.generation_mode);
+        } catch {
+          // ignore storage errors
+        }
+      })
+      .catch(() => {
+        // Fallback to localStorage/default if offline or unauthenticated
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const updateGenerationMode = useCallback(async (mode) => {
     setGenerationMode(mode);
     try {
       localStorage.setItem('cost360_superadmin_generation_mode', mode);
     } catch (e) {
       console.warn('Could not save generation mode to localStorage', e);
+    }
+    try {
+      const res = await setGlobalAiEngineMode(mode);
+      if (res?.generation_mode) {
+        setGenerationMode(res.generation_mode);
+        toast.success(`Motor "${res.generation_mode}" activado para todos los usuarios`);
+      }
+    } catch (e) {
+      console.warn('Could not persist global generation mode', e);
     }
   }, []);
 

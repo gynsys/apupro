@@ -30,10 +30,7 @@ export default function AIApuGeneratorModal({
   const isSuperAdmin = Boolean(
     user?.is_superadmin === true ||
     user?.email === 'admin@arko360.net' ||
-    user?.role === 'superadmin' ||
-    user?.is_admin === true ||
-    user?.role === 'admin' ||
-    user
+    user?.role === 'superadmin'
   );
   const { costosConfig, updateCostosConfig } = useUserCostos();
 

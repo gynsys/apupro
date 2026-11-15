@@ -98,6 +98,7 @@ export default function BudgetsScreen({ activeBudget }) {
               return (
                 <div
                   key={budget.id}
+                  data-demo-target={budget.id === 1 ? 'budget-1' : undefined}
                   className={`flex cursor-pointer flex-col items-start justify-between gap-4 rounded-2xl border-2 px-5 py-3.5 transition-all duration-300 md:flex-row md:items-center ${
                     isActive
                       ? '-translate-y-1 border-[#f59e0b] bg-[#fef3c7] shadow-md'

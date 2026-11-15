@@ -94,6 +94,7 @@ export default function PartidasScreen({ activePartida, scrolled, gearActive }) 
                     </span>
                     <button
                       type="button"
+                      data-demo-target={item.code === '5' ? 'partida-gear' : undefined}
                       className={`ml-auto rounded-md p-1 transition-all ${
                         isActive && gearActive
                           ? 'bg-blue-600 text-white ring-2 ring-blue-200'

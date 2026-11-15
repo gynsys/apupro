@@ -156,8 +156,8 @@ class AiApuGenerateRequest(BaseModel):
     # Control interactivo de Match Exacto
     bypass_exact_match: Optional[bool] = False
     accept_exact_match_code: Optional[str] = None
-    # Selector de Arquitectura de Motor ('rag' = Modo Adaptativo | 'inverse' = Modo Matemático)
-    generation_mode: Optional[str] = "rag"
+    # Selector de Arquitectura de Motor ('rag' = Modo Adaptativo | 'inverse' = Modo Matemático | 'v2' | 'v3')
+    generation_mode: Optional[str] = None
     # Días estimados de ejecución para partidas Globales (Gl / S.G.)
     execution_days: Optional[float] = None
     # Switch Superadmin para evaluación alternativa con TypeSafe AI (Jev System One)
@@ -169,6 +169,10 @@ class AiApuGenerateRequest(BaseModel):
     ferrous_pct: Optional[float] = None
     rubble_density_t_per_m3: Optional[float] = None
     units_per_ton: Optional[Dict[str, float]] = None
+
+
+class AiEngineModeUpdateRequest(BaseModel):
+    generation_mode: str
 
 
 class SmartSelectRequest(BaseModel):

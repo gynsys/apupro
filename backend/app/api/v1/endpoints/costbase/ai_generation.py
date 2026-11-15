@@ -5,14 +5,18 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.core.logging import logger
 from app.db.base import get_db
 from app.db.arko_base import ArkoSessionLocal
+from app.db.models.arko import ArkoAdmin
 from app.api.v1.endpoints.arko import get_current_arko_admin
 from app.middleware.plan_limits import check_ai_access
+from app.services.redis_cache_service import redis_cache
 from app.schemas.costbase import (
     AiApuGenerateRequest,
+    AiEngineModeUpdateRequest,
     SmartSelectRequest,
     RagDiagnosticRequest
 )
@@ -50,6 +54,130 @@ from app.api.v1.endpoints.costbase.common import (
 )
 
 router = APIRouter()
+
+GLOBAL_ENGINE_CACHE_KEY = "costbase:global_ai_generation_mode"
+VALID_GENERATION_MODES = ("rag", "inverse", "v2", "v3")
+_ENGINE_ALIASES = {
+    "workspec": "v2",
+    "delta": "v3",
+}
+
+
+def _normalize_generation_mode(mode: Optional[str]) -> str:
+    """Normaliza un modo de motor de IA y retorna 'rag' si no es válido."""
+    if not mode or not isinstance(mode, str):
+        return "rag"
+    cleaned = mode.strip().lower()
+    cleaned = _ENGINE_ALIASES.get(cleaned, cleaned)
+    return cleaned if cleaned in VALID_GENERATION_MODES else "rag"
+
+
+def _is_strict_superadmin(current_user: Any) -> bool:
+    """Verifica estrictamente si el usuario es superadministrador."""
+    return bool(
+        getattr(current_user, "is_superadmin", False) is True
+        or getattr(current_user, "role", "") == "superadmin"
+        or getattr(current_user, "email", "") == "admin@arko360.net"
+        or getattr(current_user, "is_admin", False) is True
+    )
+
+
+def _get_global_generation_mode() -> str:
+    """Obtiene el motor de generación global configurado por el superadmin."""
+    client = redis_cache._get_client()
+    if client is not None:
+        try:
+            cached = client.get(GLOBAL_ENGINE_CACHE_KEY)
+            if cached:
+                return _normalize_generation_mode(cached)
+        except Exception as exc:
+            logger.warning("No se pudo leer motor global desde Redis: %s", exc)
+
+    arko_db = ArkoSessionLocal()
+    try:
+        admin_row = arko_db.query(ArkoAdmin).filter(ArkoAdmin.email == "admin@arko360.net").first()
+        if not admin_row:
+            admin_row = arko_db.query(ArkoAdmin).order_by(ArkoAdmin.id.asc()).first()
+        site_cfg = (admin_row.site_config or {}) if admin_row else {}
+        mode = _normalize_generation_mode(site_cfg.get("global_ai_generation_mode"))
+        if client is not None:
+            try:
+                client.set(GLOBAL_ENGINE_CACHE_KEY, mode, ex=60)
+            except Exception as exc:
+                logger.warning("No se pudo guardar motor global en Redis: %s", exc)
+        return mode
+    except Exception as exc:
+        logger.error("Error leyendo motor global de IA desde PostgreSQL: %s", exc, exc_info=True)
+        return "rag"
+    finally:
+        arko_db.close()
+
+
+def _set_global_generation_mode(mode: str) -> str:
+    """Persiste el motor de generación global seleccionado por el superadmin."""
+    if not mode or not isinstance(mode, str):
+        raise ValueError("El modo de generación es obligatorio.")
+    cleaned = _ENGINE_ALIASES.get(mode.strip().lower(), mode.strip().lower())
+    if cleaned not in VALID_GENERATION_MODES:
+        raise ValueError(f"Modo de generación inválido: {mode}")
+
+    arko_db = ArkoSessionLocal()
+    try:
+        admin_row = arko_db.query(ArkoAdmin).filter(ArkoAdmin.email == "admin@arko360.net").first()
+        if not admin_row:
+            admin_row = arko_db.query(ArkoAdmin).order_by(ArkoAdmin.id.asc()).first()
+        if not admin_row:
+            raise ValueError("No se encontró registro de administrador para persistir la configuración global.")
+        site_cfg = dict(admin_row.site_config or {})
+        site_cfg["global_ai_generation_mode"] = cleaned
+        admin_row.site_config = site_cfg
+        flag_modified(admin_row, "site_config")
+        arko_db.commit()
+    except Exception:
+        arko_db.rollback()
+        raise
+    finally:
+        arko_db.close()
+
+    client = redis_cache._get_client()
+    if client is not None:
+        try:
+            client.set(GLOBAL_ENGINE_CACHE_KEY, cleaned, ex=60)
+        except Exception as exc:
+            logger.warning("No se pudo actualizar motor global en Redis: %s", exc)
+    return cleaned
+
+
+@router.get("/ai-engine-mode")
+def get_global_ai_engine_mode(
+    current_user: Any = Depends(get_current_arko_admin)
+) -> Dict[str, str]:
+    """Retorna el motor de generación de IA activo globalmente para todos los usuarios."""
+    _ = current_user
+    return {"generation_mode": _get_global_generation_mode()}
+
+
+@router.put("/ai-engine-mode")
+def update_global_ai_engine_mode(
+    payload: AiEngineModeUpdateRequest,
+    current_user: Any = Depends(get_current_arko_admin)
+) -> Dict[str, str]:
+    """Actualiza el motor de generación de IA activo globalmente (solo superadmin)."""
+    if not _is_strict_superadmin(current_user):
+        raise HTTPException(status_code=403, detail="Acceso denegado: Solo superadmin puede cambiar el motor global.")
+    try:
+        saved_mode = _set_global_generation_mode(payload.generation_mode)
+        logger.info(
+            "Superadmin %s activó motor global de IA: %s",
+            getattr(current_user, "email", "desconocido"),
+            saved_mode
+        )
+        return {"generation_mode": saved_mode}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error("Error actualizando motor global de IA: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="No se pudo guardar el motor de generación global.")
 
 
 def _safe_float_attr(obj: Any, attr: str, default: float = 0.0, disallow_zero: bool = False) -> float:
@@ -491,9 +619,16 @@ def generate_ai_apu_route(
             except Exception as j_err:
                 logger.error("Error no fatal evaluando con TypeSafe Jev: %s", j_err, exc_info=True)
 
-    if payload.generation_mode == "inverse" and is_superadmin and not payload.only_preprocess:
+    strict_superadmin = _is_strict_superadmin(current_user)
+    active_generation_mode = (
+        _normalize_generation_mode(payload.generation_mode)
+        if (strict_superadmin and payload.generation_mode)
+        else _get_global_generation_mode()
+    )
+
+    if active_generation_mode == "inverse" and not payload.only_preprocess:
         logger.info(
-            "Despachando generación de APU en Modo Matemático (Síntesis Inversa) para superadmin %s: %.80s",
+            "Despachando generación de APU en Modo Matemático (Síntesis Inversa) para usuario %s: %.80s",
             getattr(current_user, 'email', 'desconocido'),
             payload.description
         )
@@ -508,15 +643,15 @@ def generate_ai_apu_route(
             inverse_result["generation_engine"] = "inverse"
             if jev_analysis:
                 inverse_result["jev_analysis"] = jev_analysis
-            return inverse_result
+            return _strip_debug_payload(inverse_result, is_superadmin)
         except Exception as exc:
             logger.error("Error al sintetizar APU en Modo Matemático: %s", exc, exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error en Modo Matemático: {str(exc)}")
 
-    # Selector de Motor v2.0 (WorkSpec + Compositor Determinista) para Superadmin / Evaluadores
-    if payload.generation_mode in ("v2", "workspec") and is_superadmin and not payload.only_preprocess:
+    # Selector de Motor v2.0 (WorkSpec + Compositor Determinista)
+    if active_generation_mode == "v2" and not payload.only_preprocess:
         logger.info(
-            "Despachando generación de APU en Motor v2.0 (WorkSpec) para superadmin %s: %.80s",
+            "Despachando generación de APU en Motor v2.0 (WorkSpec) para usuario %s: %.80s",
             getattr(current_user, 'email', 'desconocido'),
             payload.description
         )
@@ -546,7 +681,7 @@ def generate_ai_apu_route(
             raise HTTPException(status_code=500, detail=f"Error en Motor v2.0: {str(exc)}")
 
     # Selector de Motor v3.0 (Selección IA de Mejor Partida Base + Ajustes Puntuales Delta)
-    if payload.generation_mode in ("v3", "delta") and not payload.only_preprocess:
+    if active_generation_mode == "v3" and not payload.only_preprocess:
         logger.info(
             "Despachando generación de APU en Motor v3.0 (Base + Ajustes Delta) para usuario %s: %.80s",
             getattr(current_user, 'email', 'desconocido'),

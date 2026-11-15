@@ -10,7 +10,7 @@ export default function ApuGeneratorHeader({
   setGenerationMode,
   useTypesafeJev = false,
   setUseTypesafeJev,
-  isSuperAdmin = true
+  isSuperAdmin = false
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
