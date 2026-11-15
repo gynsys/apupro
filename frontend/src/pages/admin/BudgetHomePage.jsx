@@ -400,30 +400,30 @@ export default function BudgetHomePage() {
               {/* Botón Nuevo */}
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto cursor-pointer"
+                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-4 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target w-full sm:w-auto whitespace-nowrap shrink-0 text-xs sm:text-sm cursor-pointer"
               >
-                <Plus size={20} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300" />
-                Nuevo
+                <Plus size={18} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300 shrink-0" />
+                <span>Nuevo</span>
               </button>
 
               {/* Botón Desde Archivos */}
               <button
                 onClick={() => setIsImportChoiceOpen(true)}
-                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-sky-600/20 hover:shadow-lg hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto cursor-pointer"
+                className="group flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 text-white px-4 sm:px-4 rounded-xl font-medium shadow-md shadow-sky-600/20 hover:shadow-lg hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target w-full sm:w-auto whitespace-nowrap shrink-0 text-xs sm:text-sm cursor-pointer"
                 title="Importar presupuesto desde archivo (Excel, APU, etc.)"
               >
-                <UploadCloud size={20} className="group-hover:scale-110 transition-transform duration-300" />
-                Desde Archivos
+                <UploadCloud size={18} className="group-hover:scale-110 transition-transform duration-300 shrink-0" />
+                <span>Desde Archivos</span>
               </button>
 
               {isSuperAdmin && (
                 <button
                   onClick={() => setIsMdbImportOpen(true)}
-                  className="group flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target w-full sm:w-auto"
+                  className="group flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white px-4 sm:px-4 rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target w-full sm:w-auto whitespace-nowrap shrink-0 text-xs sm:text-sm cursor-pointer"
                   title="Importar presupuesto desde base de datos (.mdb)"
                 >
-                  <Database size={20} className="group-hover:scale-110 transition-transform duration-300" />
-                  Desde *.mdb
+                  <Database size={18} className="group-hover:scale-110 transition-transform duration-300 shrink-0" />
+                  <span>Desde *.mdb</span>
                 </button>
               )}
               
@@ -432,14 +432,14 @@ export default function BudgetHomePage() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={importingBackup}
-                  className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 sm:px-5 py-2.5 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] touch-target text-xs sm:text-sm"
+                  className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 sm:px-4 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed h-[44px] touch-target text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Upload size={18} className="group-hover:scale-110 transition-transform duration-300 shrink-0" />
                   <span className="truncate">{importingBackup ? 'Importando...' : 'Importar Backup'}</span>
                 </button>
                 <button
                   onClick={() => setIsImportSharedOpen(true)}
-                  className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-[#B5DCB0] hover:bg-[#a1d39b] text-[#143d1a] border border-[#9ecc98] px-3 sm:px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-[#B5DCB0]/30 hover:shadow-lg hover:shadow-[#B5DCB0]/40 hover:-translate-y-0.5 transition-all duration-300 ease-out min-h-[44px] touch-target text-xs sm:text-sm"
+                  className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-[#B5DCB0] hover:bg-[#a1d39b] text-[#143d1a] border border-[#9ecc98] px-3 sm:px-4 rounded-xl font-semibold shadow-md shadow-[#B5DCB0]/30 hover:shadow-lg hover:shadow-[#B5DCB0]/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Link2 size={18} className="group-hover:scale-110 transition-transform duration-300 text-[#143d1a] shrink-0" />
                   <span className="truncate">Importar Enlace</span>
