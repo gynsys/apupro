@@ -162,8 +162,9 @@ export function APUPrintSheet({ partida, materiales = [], equipos = [], mano_obr
   const resolveLabBono = (l) => {
     if (bonoInFcas) return 0.0;
     const raw = l.bono ?? l.Bono ?? l.labor_bonus ?? l.bonus;
-    const parsed = raw !== null && raw !== undefined && String(raw).trim() !== '' ? parseFloat(raw) : 0.0;
-    const val = !isNaN(parsed) && parsed > 0 ? parsed : defaultLaborBonus;
+    const hasRaw = raw !== null && raw !== undefined && String(raw).trim() !== '';
+    const parsed = hasRaw ? parseFloat(raw) : NaN;
+    const val = !isNaN(parsed) ? parsed : defaultLaborBonus;
     return val * exRate * (1 + labInflation / 100);
   };
 

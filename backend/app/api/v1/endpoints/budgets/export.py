@@ -22,6 +22,70 @@ from app.services.code_mapping import apply_code_maps, build_code_maps
 router = APIRouter()
 
 
+def calculate_db_item_pu(item: BudgetItem, budget: Budget) -> float:
+    """Calcula matemáticamente el Precio Unitario (Subtotal C) de un ítem con APU según la normativa venezolana."""
+    if not item or item.is_chapter:
+        return 0.0
+
+    perf = float(item.performance if item.performance is not None and item.performance > 0 else 1.0)
+    curr = (budget.currency or "USD").strip().upper()
+    ex_rate = float(budget.exchange_rate if budget.exchange_rate is not None and budget.exchange_rate > 0 else 1.0) if curr in {"BS", "VES", "BSF"} else 1.0
+
+    # 1. Materiales
+    mat_cost = 0.0
+    for m in (item.materials or []):
+        qty = float(m.cantidad or 0.0)
+        desp = float(m.desperdicio or 0.0)
+        price = float(m.precio_unitario or 0.0) * ex_rate
+        base = round((qty * (1.0 + (desp / 100.0))) * price, 2)
+        mat_cost += base
+    mat_cost = round(mat_cost, 2)
+
+    # 2. Equipos
+    eq_day = 0.0
+    for e in (item.equipments or []):
+        qty = float(e.cantidad or 0.0)
+        deprec = float(e.depreciacion if e.depreciacion is not None and e.depreciacion > 0 else 1.0)
+        price = float(e.precio_unitario or 0.0) * ex_rate
+        eq_day += round(qty * deprec * price, 2)
+    eq_day = round(eq_day, 2)
+    eq_cost = round(eq_day / perf, 2)
+
+    # 3. Mano de Obra
+    jornal_day = 0.0
+    bono_day = 0.0
+    fcas_pct = float(budget.fcas_percent if budget.fcas_percent is not None else 417.0)
+    bono_in_fcas = bool(budget.bono_in_fcas or fcas_pct >= 1000.0)
+    default_bono = float(budget.labor_bonus or 0.0) if not bono_in_fcas else 0.0
+
+    for l in (item.labors or []):
+        qty = float(l.cantidad or 0.0)
+        j = float(l.jornal or 0.0) * ex_rate
+        jornal_day += round(qty * j, 2)
+        if not bono_in_fcas:
+            raw_b = l.bono
+            b_val = float(raw_b) if raw_b is not None else default_bono
+            bono_day += round(qty * (b_val * ex_rate), 2)
+
+    jornal_day = round(jornal_day, 2)
+    bono_day = round(bono_day, 2)
+    fcas_monto = round(jornal_day * (fcas_pct / 100.0), 2)
+    lab_total_day = round(jornal_day + bono_day + fcas_monto, 2)
+    lab_cost = round(lab_total_day / perf, 2)
+
+    # Overheads
+    sub_a = round(mat_cost + eq_cost + lab_cost, 2)
+    admin_pct = float(budget.admin_percent if budget.admin_percent is not None else 15.0)
+    profit_pct = float(budget.profit_percent if budget.profit_percent is not None else 10.0)
+
+    admin_cost = round(sub_a * (admin_pct / 100.0), 2)
+    sub_b = round(sub_a + admin_cost, 2)
+    profit_cost = round(sub_b * (profit_pct / 100.0), 2)
+    pu = round(sub_b + profit_cost, 2)
+
+    return float(pu)
+
+
 @router.post("/{budget_id}/export-excel")
 async def export_budget_excel(
     budget_id: str,
@@ -75,8 +139,19 @@ async def export_budget_excel(
         if payload and payload.items:
             items_data = [item.model_dump() for item in payload.items]
         else:
-            db_items = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id).order_by(BudgetItem.order).all()
+            db_items = (
+                db.query(BudgetItem)
+                .options(
+                    joinedload(BudgetItem.materials),
+                    joinedload(BudgetItem.equipments),
+                    joinedload(BudgetItem.labors),
+                )
+                .filter(BudgetItem.budget_id == budget_id)
+                .order_by(BudgetItem.order)
+                .all()
+            )
             for db_item in db_items:
+                pu_val = calculate_db_item_pu(db_item, budget)
                 items_data.append({
                     "id": db_item.id,
                     "is_chapter": db_item.is_chapter,
@@ -84,7 +159,7 @@ async def export_budget_excel(
                     "description": db_item.description,
                     "unit": db_item.unit or "",
                     "quantity": float(db_item.quantity or 0.0),
-                    "pu": 0.0,
+                    "pu": pu_val,
                 })
 
         file_path, filename = generate_budget_excel_workbook(budget_dict, items_data)

@@ -693,6 +693,16 @@ def commit_budget_import(
     profit_val = payload.profit_percent if (payload.profit_percent is not None and payload.profit_percent > 0) else getattr(costos, "porcentajeUtilidad", 10.0)
     iva_val = payload.iva_percent if (payload.iva_percent is not None and payload.iva_percent >= 0) else getattr(costos, "iva", 16.0)
 
+    has_any_labor_bonus = any(
+        float(getattr(l, "bono", None) if hasattr(l, "bono") else (l.get("bonus") or l.get("bono") or 0.0) or 0.0) > 0
+        for item in payload.items
+        for l in (item.labors or [])
+    )
+    if payload.source_type == "excel_apu" or not has_any_labor_bonus:
+        final_labor_bonus = 0.0
+    else:
+        final_labor_bonus = 0.0 if getattr(costos, "fcasBonoInFcas", False) else (getattr(costos, "fcasLaborBonus", 0.0) or 0.0)
+
     budget = Budget(
         user_id=str(current_user.id),
         name=payload.name.strip(),
@@ -705,7 +715,7 @@ def commit_budget_import(
         admin_percent=admin_val,
         profit_percent=profit_val,
         iva_percent=iva_val,
-        labor_bonus=0.0 if getattr(costos, "fcasBonoInFcas", False) else (getattr(costos, "fcasLaborBonus", 0.0) or 0.0),
+        labor_bonus=final_labor_bonus,
         bono_in_fcas=getattr(costos, "fcasBonoInFcas", False),
     )
 

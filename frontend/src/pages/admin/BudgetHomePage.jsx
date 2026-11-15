@@ -216,6 +216,7 @@ export default function BudgetHomePage() {
 
   const handleExportToExcel = async (budget) => {
     try {
+      toast.loading('Generando Excel con precios unitarios...', { id: 'exporting-excel' });
       const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
       const response = await fetch(`${apiUrl}/budgets/${budget.id}/export-excel`, {
         method: 'POST',
@@ -230,17 +231,18 @@ export default function BudgetHomePage() {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `${budget.name.replace(/[^a-z0-9]/gi, '_')}.xlsx`);
+      const safeName = (budget.name || budget.project_name || 'Presupuesto').replace(/[^a-zA-Z0-9_\-áéíóúÁÉÍÓÚñÑ ]/g, '_').trim();
+      link.setAttribute('download', `${safeName}.xlsx`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast.success('Presupuesto exportado exitosamente');
+      toast.success('Presupuesto exportado exitosamente', { id: 'exporting-excel' });
     } catch (error) {
       console.error('Error al exportar:', error);
-      toast.error('Error al exportar el presupuesto');
+      toast.error('Error al exportar el presupuesto', { id: 'exporting-excel' });
     }
   };
 
