@@ -156,6 +156,8 @@ def build_preview(data: bytes, filename: str, db: Session, mode: str = "budget")
     header["currency"] = "VES" if currency in {"VES", "BS", "BSF", "BOLIVAR", "BOLÍVAR"} else "USD"
     header["project_name"] = (header.get("project_name") or None)
     header["client_name"] = (header.get("client_name") or None)
+    raw_iva = header.get("iva_percent")
+    header["iva_percent"] = float(raw_iva) if (raw_iva is not None and float(raw_iva) >= 1.0) else 16.0
 
     return {
         "filename": filename,

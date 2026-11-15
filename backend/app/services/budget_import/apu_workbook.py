@@ -286,10 +286,10 @@ def _parse_single_apu_sheet(ws: Worksheet, sheet_name: str, sheet_index: int) ->
                         profit = cand_f
                         break
 
-            if ("IMPUESTO" in supper or "I.V.A." in supper) and iva is None:
+            if ("IMPUESTO" in supper or "I.V.A." in supper) and not any(term in supper for term in ("SIN IMPUESTO", "SIN IVA", "SIN I.V.A.")) and iva is None:
                 for cand in row:
                     cand_f = _to_float(cand, default=-1.0)
-                    if 0.0 <= cand_f <= 35.0:
+                    if 1.0 <= cand_f <= 35.0:
                         iva = cand_f
                         break
 
@@ -490,6 +490,8 @@ def extract_from_apu_workbook(data: bytes, filename: str) -> Dict[str, Any]:
 
     budget_name = global_obra or Path(filename or "").stem.replace("_", " ").title() or "Presupuesto APU Excel"
 
+    final_iva = global_iva if (global_iva is not None and global_iva >= 1.0) else 16.0
+
     header = {
         "budget_name": budget_name[:250],
         "project_name": global_obra[:250] if global_obra else None,
@@ -498,7 +500,7 @@ def extract_from_apu_workbook(data: bytes, filename: str) -> Dict[str, Any]:
         "fcas_percent": global_fcas,
         "admin_percent": global_admin,
         "profit_percent": global_profit,
-        "iva_percent": global_iva,
+        "iva_percent": final_iva,
     }
 
     stats = {
