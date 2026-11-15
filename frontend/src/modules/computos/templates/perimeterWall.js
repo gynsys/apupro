@@ -93,7 +93,7 @@ export const DEFAULT_WALL_INPUT = {
   includeElectricFence: false,
 };
 
-function baseRow(key, chapter, description, unit, quantity, formula, observations = '', breakdown = []) {
+function baseRow(key, chapter, description, unit, quantity, formula, observations = '', breakdown = [], partials = []) {
   return {
     id: typeof crypto !== 'undefined' && crypto.randomUUID
       ? `macro-${crypto.randomUUID()}`
@@ -107,7 +107,31 @@ function baseRow(key, chapter, description, unit, quantity, formula, observation
     formula,
     observations,
     breakdown,
+    partials,
     isDefaultQty: false,
+  };
+}
+
+function basePartial(description, values = {}) {
+  const unit = String(values.unit || '').trim().toUpperCase();
+  const partialValue = round2(values.partial ?? values.m3 ?? 0);
+  return {
+    id: typeof crypto !== 'undefined' && crypto.randomUUID
+      ? `part-${crypto.randomUUID()}`
+      : `part-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    description,
+    geometryType: unit === 'M3' ? 'prism' : 'rectangle',
+    times: 1,
+    length: '',
+    width: '',
+    height: '',
+    factor: '',
+    distance: '',
+    m3: '',
+    formula: values.formula || '',
+    observations: '',
+    ...values,
+    partial: partialValue,
   };
 }
 
@@ -161,9 +185,60 @@ export function calculatePerimeterWall(input = {}) {
     const concrete = length * foundationWidth * foundationDepth;
     const formwork = length * 2 * foundationDepth;
 
-    rows.push(baseRow('foundation_excavation', chapter, 'Excavación para fundación de pared perimetral', 'M3', excavation, 'L × (ancho + 0,20) × (profundidad + 0,10)'));
-    rows.push(baseRow('foundation_concrete', chapter, 'Concreto para fundación corrida de pared perimetral', 'M3', concrete, `L × ${foundationWidth} × ${foundationDepth}`));
-    rows.push(baseRow('foundation_formwork', chapter, 'Encofrado de fundación corrida', 'M2', formwork, `L × 2 × ${foundationDepth}`));
+    rows.push(baseRow(
+      'foundation_excavation',
+      chapter,
+      'Excavación para fundación de pared perimetral',
+      'M3',
+      excavation,
+      'L × (ancho + 0,20) × (profundidad + 0,10)',
+      '',
+      [],
+      [basePartial('Excavación', {
+        unit: 'M3',
+        length,
+        width: foundationWidth + 0.20,
+        height: foundationDepth + 0.10,
+        partial: excavation,
+        formula: `${round2(length)} × ${round2(foundationWidth + 0.20)} × ${round2(foundationDepth + 0.10)}`,
+      })],
+    ));
+    rows.push(baseRow(
+      'foundation_concrete',
+      chapter,
+      'Concreto para fundación corrida de pared perimetral',
+      'M3',
+      concrete,
+      `L × ${foundationWidth} × ${foundationDepth}`,
+      '',
+      [],
+      [basePartial('Concreto de fundación', {
+        unit: 'M3',
+        length,
+        width: foundationWidth,
+        height: foundationDepth,
+        partial: concrete,
+        formula: `${round2(length)} × ${round2(foundationWidth)} × ${round2(foundationDepth)}`,
+      })],
+    ));
+    rows.push(baseRow(
+      'foundation_formwork',
+      chapter,
+      'Encofrado de fundación corrida',
+      'M2',
+      formwork,
+      `L × 2 × ${foundationDepth}`,
+      '',
+      [],
+      [basePartial('Encofrado', {
+        unit: 'M2',
+        times: 2,
+        length,
+        width: foundationDepth,
+        partial: formwork,
+        formula: `2 × ${round2(length)} × ${round2(foundationDepth)}`,
+      })],
+    ));
 
     if (data.includeRebar) {
       const longitudinalBars = Math.max(1, Number(data.foundationBarCount) || 4);
@@ -177,16 +252,86 @@ export function calculatePerimeterWall(input = {}) {
       const stirrupLength = 2 * (foundationWidth + foundationDepth) + 0.20;
       const stirrupKg = stirrupCount * stirrupLength * rebarKgPerM(stirrupDiameter);
 
-      rows.push(baseRow('foundation_rebar_long', chapter, 'Acero longitudinal de fundación', 'KG', longitudinalKg, `${longitudinalBars} Ø${longitudinalDiameter} mm × ${round2(longitudinalLength)} m × ${rebarKgPerM(longitudinalDiameter)} kg/m`));
-      rows.push(baseRow('foundation_rebar_stirrups', chapter, 'Estribos de fundación', 'KG', stirrupKg, `${stirrupCount} estribos × ${round2(stirrupLength)} m × Ø${stirrupDiameter} mm`));
+      rows.push(baseRow(
+        'foundation_rebar_long',
+        chapter,
+        'Acero longitudinal de fundación',
+        'KG',
+        longitudinalKg,
+        `${longitudinalBars} Ø${longitudinalDiameter} mm × ${round2(longitudinalLength)} m × ${rebarKgPerM(longitudinalDiameter)} kg/m`,
+        '',
+        [],
+        [basePartial('Acero longitudinal', {
+          unit: 'KG',
+          length: longitudinalLength,
+          height: longitudinalBars,
+          factor: rebarKgPerM(longitudinalDiameter),
+          partial: longitudinalKg,
+          formula: `${longitudinalBars} × ${round2(longitudinalLength)} m × ${rebarKgPerM(longitudinalDiameter)} kg/m`,
+        })],
+      ));
+      rows.push(baseRow(
+        'foundation_rebar_stirrups',
+        chapter,
+        'Estribos de fundación',
+        'KG',
+        stirrupKg,
+        `${stirrupCount} estribos × ${round2(stirrupLength)} m × Ø${stirrupDiameter} mm`,
+        '',
+        [],
+        [basePartial('Estribos', {
+          unit: 'KG',
+          times: stirrupCount,
+          length: stirrupLength,
+          height: 1,
+          factor: rebarKgPerM(stirrupDiameter),
+          partial: stirrupKg,
+          formula: `${stirrupCount} × ${round2(stirrupLength)} m × ${rebarKgPerM(stirrupDiameter)} kg/m`,
+        })],
+      ));
     }
   }
 
   if (data.includeColumns) {
     const columnConcrete = columns * columnWidth * columnDepth * height;
     const columnFormwork = columns * 2 * (columnWidth + columnDepth) * height;
-    rows.push(baseRow('columns_concrete', chapter, `Columnas de concreto para pared perimetral (${columns} und)`, 'M3', columnConcrete, `${columns} × ${columnWidth} × ${columnDepth} × ${height}`));
-    rows.push(baseRow('columns_formwork', chapter, 'Encofrado de columnas de pared perimetral', 'M2', columnFormwork, `${columns} × 2 × (${columnWidth} + ${columnDepth}) × ${height}`));
+    rows.push(baseRow(
+      'columns_concrete',
+      chapter,
+      `Columnas de concreto para pared perimetral (${columns} und)`,
+      'M3',
+      columnConcrete,
+      `${columns} × ${columnWidth} × ${columnDepth} × ${height}`,
+      '',
+      [],
+      [basePartial('Columnas', {
+        unit: 'M3',
+        times: columns,
+        length: columnWidth,
+        width: columnDepth,
+        height,
+        partial: columnConcrete,
+        formula: `${columns} × ${columnWidth} × ${columnDepth} × ${round2(height)}`,
+      })],
+    ));
+    rows.push(baseRow(
+      'columns_formwork',
+      chapter,
+      'Encofrado de columnas de pared perimetral',
+      'M2',
+      columnFormwork,
+      `${columns} × 2 × (${columnWidth} + ${columnDepth}) × ${height}`,
+      '',
+      [],
+      [basePartial('Encofrado de columnas', {
+        unit: 'M2',
+        times: columns,
+        length: 2 * (columnWidth + columnDepth),
+        width: height,
+        partial: columnFormwork,
+        formula: `${columns} × 2 × (${columnWidth} + ${columnDepth}) × ${round2(height)}`,
+      })],
+    ));
 
     if (data.includeRebar) {
       const verticalBars = Math.max(1, Number(data.columnBarCount) || 4);
@@ -200,8 +345,44 @@ export function calculatePerimeterWall(input = {}) {
       const stirrupLength = 2 * (columnWidth + columnDepth) + 0.20;
       const stirrupKg = columns * stirrupCountPerColumn * stirrupLength * rebarKgPerM(stirrupDiameter);
 
-      rows.push(baseRow('columns_rebar_vertical', chapter, 'Acero vertical de columnas', 'KG', verticalKg, `${columns} columnas × ${verticalBars} Ø${verticalDiameter} mm × ${round2(verticalLength)} m`));
-      rows.push(baseRow('columns_rebar_stirrups', chapter, 'Estribos de columnas', 'KG', stirrupKg, `${columns} × ${stirrupCountPerColumn} estribos × ${round2(stirrupLength)} m × Ø${stirrupDiameter} mm`));
+      rows.push(baseRow(
+        'columns_rebar_vertical',
+        chapter,
+        'Acero vertical de columnas',
+        'KG',
+        verticalKg,
+        `${columns} columnas × ${verticalBars} Ø${verticalDiameter} mm × ${round2(verticalLength)} m`,
+        '',
+        [],
+        [basePartial('Acero vertical', {
+          unit: 'KG',
+          times: columns,
+          length: verticalLength,
+          height: verticalBars,
+          factor: rebarKgPerM(verticalDiameter),
+          partial: verticalKg,
+          formula: `${columns} × ${verticalBars} × ${round2(verticalLength)} m × ${rebarKgPerM(verticalDiameter)} kg/m`,
+        })],
+      ));
+      rows.push(baseRow(
+        'columns_rebar_stirrups',
+        chapter,
+        'Estribos de columnas',
+        'KG',
+        stirrupKg,
+        `${columns} × ${stirrupCountPerColumn} estribos × ${round2(stirrupLength)} m × Ø${stirrupDiameter} mm`,
+        '',
+        [],
+        [basePartial('Estribos de columnas', {
+          unit: 'KG',
+          times: columns * stirrupCountPerColumn,
+          length: stirrupLength,
+          height: 1,
+          factor: rebarKgPerM(stirrupDiameter),
+          partial: stirrupKg,
+          formula: `${columns * stirrupCountPerColumn} × ${round2(stirrupLength)} m × ${rebarKgPerM(stirrupDiameter)} kg/m`,
+        })],
+      ));
     }
   }
 
@@ -243,25 +424,114 @@ export function calculatePerimeterWall(input = {}) {
     `Área bruta ${round2(grossArea)} − huecos ${round2(openingArea)}`,
     'Incluye bloques y mortero de pega; el desglose queda en la fila.',
     wallBreakdown,
+    [basePartial('Área neta de pared', {
+      unit: 'M2',
+      length: netArea,
+      width: 1,
+      partial: netArea,
+      formula: `${round2(grossArea)} − ${round2(openingArea)} = ${round2(netArea)} m²`,
+    })],
   ));
 
   if (Number(data.frisoSides) > 0) {
     const friso = netArea * Number(data.frisoSides);
-    rows.push(baseRow('friso', chapter, `Friso de pared (${data.frisoSides} cara${Number(data.frisoSides) > 1 ? 's' : ''})`, 'M2', friso, `Área neta × ${data.frisoSides}`));
+    rows.push(baseRow(
+      'friso',
+      chapter,
+      `Friso de pared (${data.frisoSides} cara${Number(data.frisoSides) > 1 ? 's' : ''})`,
+      'M2',
+      friso,
+      `Área neta × ${data.frisoSides}`,
+      '',
+      [],
+      [basePartial('Friso', {
+        unit: 'M2',
+        times: Number(data.frisoSides),
+        length: netArea,
+        width: 1,
+        partial: friso,
+        formula: `${round2(netArea)} × ${data.frisoSides}`,
+      })],
+    ));
   }
 
   if (data.includePaint) {
-    rows.push(baseRow('paint', chapter, 'Pintura de pared perimetral', 'M2', netArea * Math.max(1, Number(data.frisoSides) || 1), 'Área neta × caras'));
+    const paintQty = netArea * Math.max(1, Number(data.frisoSides) || 1);
+    rows.push(baseRow(
+      'paint',
+      chapter,
+      'Pintura de pared perimetral',
+      'M2',
+      paintQty,
+      'Área neta × caras',
+      '',
+      [],
+      [basePartial('Pintura', {
+        unit: 'M2',
+        times: Math.max(1, Number(data.frisoSides) || 1),
+        length: netArea,
+        width: 1,
+        partial: paintQty,
+        formula: `${round2(netArea)} × ${Math.max(1, Number(data.frisoSides) || 1)}`,
+      })],
+    ));
   }
 
   if (data.includeConcertina) {
-    rows.push(baseRow('concertina', chapter, 'Concertina galvanizada de seguridad', 'ML', length, 'Longitud de pared'));
+    rows.push(baseRow(
+      'concertina',
+      chapter,
+      'Concertina galvanizada de seguridad',
+      'ML',
+      length,
+      'Longitud de pared',
+      '',
+      [],
+      [basePartial('Concertina', {
+        unit: 'ML',
+        length,
+        width: 1,
+        partial: length,
+        formula: `${round2(length)} m`,
+      })],
+    ));
   }
   if (data.includeElectricFence) {
-    rows.push(baseRow('electric_fence', chapter, 'Cerco eléctrico perimetral', 'ML', length, 'Longitud de pared'));
+    rows.push(baseRow(
+      'electric_fence',
+      chapter,
+      'Cerco eléctrico perimetral',
+      'ML',
+      length,
+      'Longitud de pared',
+      '',
+      [],
+      [basePartial('Cerco eléctrico', {
+        unit: 'ML',
+        length,
+        width: 1,
+        partial: length,
+        formula: `${round2(length)} m`,
+      })],
+    ));
   }
   if (gateCount > 0) {
-    rows.push(baseRow('gate', chapter, 'Portón de acceso para pared perimetral', 'UND', gateCount, `Cantidad: ${gateCount}`));
+    rows.push(baseRow(
+      'gate',
+      chapter,
+      'Portón de acceso para pared perimetral',
+      'UND',
+      gateCount,
+      `Cantidad: ${gateCount}`,
+      '',
+      [],
+      [basePartial('Portones', {
+        unit: 'UND',
+        times: gateCount,
+        partial: gateCount,
+        formula: `${gateCount} und`,
+      })],
+    ));
   }
 
   const totals = {

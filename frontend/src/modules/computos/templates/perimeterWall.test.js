@@ -23,4 +23,22 @@ describe('perimeterWall', () => {
     expect(wall.quantity).toBe(totals.area);
     expect(totals.blocks).toBeGreaterThan(0);
   });
+
+  it('cada fila trae parciales que explican su cantidad', () => {
+    const { rows } = calculatePerimeterWall({
+      length: 20,
+      height: 2.7,
+      includeFoundation: true,
+      includeColumns: true,
+      includeRebar: true,
+    });
+
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((row) => {
+      expect(Array.isArray(row.partials)).toBe(true);
+      expect(row.partials.length).toBeGreaterThan(0);
+      const partialTotal = row.partials.reduce((sum, partial) => sum + Number(partial.partial || 0), 0);
+      expect(Math.round(partialTotal * 100) / 100).toBe(row.quantity);
+    });
+  });
 });
