@@ -158,100 +158,113 @@ export function getRowOwnQuantity(row) {
 export function applyReactiveLinks(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return rows;
 
-  const rowMap = new Map();
-  rows.forEach((r) => {
-    if (r?.id) rowMap.set(r.id, r);
-  });
+  let currentRows = rows;
+  const maxPasses = Math.min(rows.length, 5);
 
-  return rows.map((row) => {
-    let currentRow = row;
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    let anyChanged = false;
+    const rowMap = new Map();
+    currentRows.forEach((r) => {
+      if (r?.id) rowMap.set(r.id, r);
+    });
 
-    // 1. Si la fila tiene parciales donde alguno proviene de una vinculación ("Viene de ...")
-    if (Array.isArray(currentRow.partials) && currentRow.partials.some((p) => p?.linkedTo?.sourceItemId)) {
-      let partialsChanged = false;
-      const nextPartials = currentRow.partials.map((p) => {
-        if (!p?.linkedTo?.sourceItemId) return p;
-        const source = rowMap.get(p.linkedTo.sourceItemId);
-        if (!source) {
+    currentRows = currentRows.map((row) => {
+      let currentRow = row;
+
+      // 1. Si la fila tiene parciales donde alguno proviene de una vinculación ("Viene de ...")
+      if (Array.isArray(currentRow.partials) && currentRow.partials.some((p) => p?.linkedTo?.sourceItemId)) {
+        let partialsChanged = false;
+        const nextPartials = currentRow.partials.map((p) => {
+          if (!p?.linkedTo?.sourceItemId) return p;
+          const source = rowMap.get(p.linkedTo.sourceItemId);
+          if (!source) {
+            partialsChanged = true;
+            return { ...p, linkedTo: null };
+          }
+          const nextSourceQty = Number(source.quantity || 0);
+          const nextSourceDesc = source.description || p.linkedTo.sourceDescription || '';
+          const nextSourceUnit = source.unit || p.linkedTo.sourceUnit || '';
+          if (
+            p.linkedTo.sourceQuantity === nextSourceQty &&
+            p.linkedTo.sourceDescription === nextSourceDesc
+          ) {
+            return p;
+          }
           partialsChanged = true;
-          return { ...p, linkedTo: null };
-        }
-        const nextSourceQty = Number(source.quantity || 0);
-        const nextSourceDesc = source.description || p.linkedTo.sourceDescription || '';
-        const nextSourceUnit = source.unit || p.linkedTo.sourceUnit || '';
-        if (
-          p.linkedTo.sourceQuantity === nextSourceQty &&
-          p.linkedTo.sourceDescription === nextSourceDesc
-        ) {
-          return p;
-        }
-        partialsChanged = true;
-        const nextDesc =
-          !p.description || /^viene de\b/i.test(p.description.trim())
-            ? `Viene de ${nextSourceDesc || 'partida vinculada'}`
-            : p.description;
-        return {
-          ...p,
-          description: nextDesc,
-          linkedTo: {
-            ...p.linkedTo,
-            sourceQuantity: nextSourceQty,
-            sourceDescription: nextSourceDesc,
-            sourceUnit: nextSourceUnit,
-          },
-        };
-      });
+          const nextDesc =
+            !p.description || /^viene de\b/i.test(p.description.trim())
+              ? `Viene de ${nextSourceDesc || 'partida vinculada'}`
+              : p.description;
+          return {
+            ...p,
+            description: nextDesc,
+            linkedTo: {
+              ...p.linkedTo,
+              sourceQuantity: nextSourceQty,
+              sourceDescription: nextSourceDesc,
+              sourceUnit: nextSourceUnit,
+            },
+          };
+        });
 
-      if (partialsChanged) {
-        currentRow = recomputeItemWithPartials({ ...currentRow, partials: nextPartials });
-        rowMap.set(currentRow.id, currentRow);
+        if (partialsChanged) {
+          anyChanged = true;
+          currentRow = recomputeItemWithPartials({ ...currentRow, partials: nextPartials });
+          rowMap.set(currentRow.id, currentRow);
+        }
       }
-    }
 
-    // 2. Si la fila completa tiene vínculo directo (ej: nueva partida derivada sin desglose)
-    if (!currentRow.linkedTo || !currentRow.linkedTo.sourceItemId) {
-      return currentRow;
-    }
+      // 2. Si la fila completa tiene vínculo directo (ej: nueva partida derivada sin desglose)
+      if (!currentRow.linkedTo || !currentRow.linkedTo.sourceItemId) {
+        return currentRow;
+      }
 
-    const source = rowMap.get(currentRow.linkedTo.sourceItemId);
-    const ownQty = getRowOwnQuantity(currentRow);
-    const ownFormula = currentRow._ownFormula ?? currentRow.linkedTo?.baseFormula ?? '';
+      const source = rowMap.get(currentRow.linkedTo.sourceItemId);
+      const ownQty = getRowOwnQuantity(currentRow);
+      const ownFormula = currentRow._ownFormula ?? currentRow.linkedTo?.baseFormula ?? '';
 
-    if (!source) {
-      const restoredQty = ownQty > 0 ? ownQty : Number(currentRow.quantity) || 0;
-      return {
+      if (!source) {
+        const restoredQty = ownQty > 0 ? ownQty : Number(currentRow.quantity) || 0;
+        anyChanged = true;
+        return {
+          ...currentRow,
+          quantity: restoredQty,
+          partial: restoredQty,
+          formula: ownFormula || currentRow.formula || '',
+          linkedTo: null,
+        };
+      }
+
+      const linkedQty = computeLinkedQuantity(source.quantity, currentRow.linkedTo);
+      const mode = currentRow.linkedTo.mode || (ownQty > 0 ? 'add' : 'replace');
+      const calculatedQty = mode === 'add' ? round2(ownQty + linkedQty) : linkedQty;
+      const unitLabel = String(currentRow.unit || '').toLowerCase();
+
+      let nextFormula = currentRow.formula || '';
+      if (mode === 'add' && ownQty > 0) {
+        const basePart = ownFormula ? `${ownFormula}` : `${ownQty}${unitLabel}`;
+        nextFormula = `${basePart} + [Vinculado: ${linkedQty}${unitLabel}] = ${calculatedQty}${unitLabel}`;
+      } else if (ownFormula) {
+        nextFormula = ownFormula;
+      }
+
+      if (currentRow.quantity === calculatedQty && currentRow.formula === nextFormula) {
+        return currentRow;
+      }
+
+      anyChanged = true;
+      const updatedRow = {
         ...currentRow,
-        quantity: restoredQty,
-        partial: restoredQty,
-        formula: ownFormula || currentRow.formula || '',
-        linkedTo: null,
+        quantity: calculatedQty,
+        partial: calculatedQty,
+        formula: nextFormula,
       };
-    }
+      rowMap.set(updatedRow.id, updatedRow);
+      return updatedRow;
+    });
 
-    const linkedQty = computeLinkedQuantity(source.quantity, currentRow.linkedTo);
-    const mode = currentRow.linkedTo.mode || (ownQty > 0 ? 'add' : 'replace');
-    const calculatedQty = mode === 'add' ? round2(ownQty + linkedQty) : linkedQty;
-    const unitLabel = String(currentRow.unit || '').toLowerCase();
+    if (!anyChanged) break;
+  }
 
-    let nextFormula = currentRow.formula || '';
-    if (mode === 'add' && ownQty > 0) {
-      const basePart = ownFormula ? `${ownFormula}` : `${ownQty}${unitLabel}`;
-      nextFormula = `${basePart} + [Vinculado: ${linkedQty}${unitLabel}] = ${calculatedQty}${unitLabel}`;
-    } else if (ownFormula) {
-      nextFormula = ownFormula;
-    }
-
-    if (currentRow.quantity === calculatedQty && currentRow.formula === nextFormula) {
-      return currentRow;
-    }
-
-    const updatedRow = {
-      ...currentRow,
-      quantity: calculatedQty,
-      partial: calculatedQty,
-      formula: nextFormula,
-    };
-    rowMap.set(updatedRow.id, updatedRow);
-    return updatedRow;
-  });
+  return currentRows;
 }

@@ -151,7 +151,7 @@ def _build_sync_audit_excel(
         ws.merge_cells("A1:H1")
         ws["A1"] = (
             f"Auditoría de Actualización · {sheet_title} — {budget_name} | "
-            f"Total: {old_total:,.2f} → {new_total:,.2f} ({diff_percent:+.2f}%)"
+            f"Neto (sin IVA): {old_total:,.2f} → {new_total:,.2f} ({diff_percent:+.2f}%)"
         )
         ws["A1"].font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         ws["A1"].fill = banner_fill
@@ -299,7 +299,7 @@ def sync_budget_advanced(
     if not budget:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
 
-    _, old_total = compute_budget_summary_metrics(budget)
+    old_subtotal, old_total = compute_budget_summary_metrics(budget)
 
     # Si se solicitó crear nueva versión, duplicamos el presupuesto y aplicamos los cambios a la copia
     if req.create_new_version:
@@ -695,9 +695,11 @@ def sync_budget_advanced(
         db.commit()
 
     # Recalcular nuevo total
-    _, new_total = compute_budget_summary_metrics(target_budget)
+    new_subtotal, new_total = compute_budget_summary_metrics(target_budget)
     diff_amount = round(new_total - old_total, 2)
     diff_percent = round((diff_amount / old_total * 100.0) if old_total > 0 else 0.0, 2)
+    net_diff_amount = round(new_subtotal - old_subtotal, 2)
+    net_diff_percent = round((net_diff_amount / old_subtotal * 100.0) if old_subtotal > 0 else 0.0, 2)
 
     audit_excel_base64: Optional[str] = None
     audit_excel_filename: Optional[str] = None
@@ -713,9 +715,9 @@ def sync_budget_advanced(
         )
         audit_excel_base64, audit_excel_filename = _build_sync_audit_excel(
             target_budget.name,
-            old_total,
-            new_total,
-            diff_percent,
+            old_subtotal,
+            new_subtotal,
+            net_diff_percent,
             mat_rows,
             eq_rows,
             lab_rows,

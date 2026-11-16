@@ -177,4 +177,9 @@ describe('fórmulas de cómputos', () => {
     expect(result.partial).toBe(1);
     expect(result.formula).toContain('5 × 1 = 5 PTO');
   });
+
+  it('evita doble redondeo intermedio en computePartial al multiplicar dimensiones pequeñas o cabillas por veces', () => {
+    expect(computePartial({ length: 0.25, width: 0.25, height: 0.35, times: 50, unit: 'M3' })).toBe(1.09);
+    expect(computePartial({ description: 'Cabilla 3/8', length: 1, height: 1, times: 100, factor: 0.559, unit: 'KG' })).toBe(55.9);
+  });
 });

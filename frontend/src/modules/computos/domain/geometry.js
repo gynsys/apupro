@@ -106,7 +106,7 @@ function parseNum(v) {
  * 
  * @param {Object} row - Fila o parcial con campos geométricos
  * @param {string} unit - Unidad de medida (M3, M2, ML, etc.)
- * @returns {{ baseGeom: number, formulaStr: string, trenchDetails?: Object }}
+ * @returns {{ baseGeom: number, rawBaseGeom?: number, formulaStr: string, trenchDetails?: Object }}
  */
 export function computeGeometryBase(row, unit = 'M3') {
   const geomType = row.geometryType || getDefaultGeometryType(unit);
@@ -127,11 +127,12 @@ export function computeGeometryBase(row, unit = 'M3') {
           const formulaStr = h !== null && h > 0
             ? `(3.1416 × ${d}m × ${h}m) = ${roundedArea}m²`
             : `(3.1416 × ${d}m) = ${roundedArea}m²`;
-          return { baseGeom: roundedArea, formulaStr };
+          return { baseGeom: roundedArea, rawBaseGeom: area, formulaStr };
         } else if (normUnit === 'M' || normUnit === 'ML') {
           // Perímetro circular: 3.1416 × D
-          const perim = round2(3.1416 * d);
-          return { baseGeom: perim, formulaStr: `(3.1416 × ${d}m) = ${perim}m` };
+          const rawPerim = 3.1416 * d;
+          const perim = round2(rawPerim);
+          return { baseGeom: perim, rawBaseGeom: rawPerim, formulaStr: `(3.1416 × ${d}m) = ${perim}m` };
         } else {
           // Volumen del cilindro (M3): (3.1416 × D² / 4) × H
           const heightVal = h !== null && h > 0 ? h : 1;
@@ -140,7 +141,7 @@ export function computeGeometryBase(row, unit = 'M3') {
           const formulaStr = h !== null && h > 0
             ? `((3.1416 × (${d}m)² / 4) × ${h}m) = ${roundedVol}m³`
             : `(3.1416 × (${d}m)² / 4) = ${roundedVol}m³`;
-          return { baseGeom: roundedVol, formulaStr };
+          return { baseGeom: roundedVol, rawBaseGeom: vol, formulaStr };
         }
       }
       break;
@@ -158,6 +159,7 @@ export function computeGeometryBase(row, unit = 'M3') {
         if (normUnit === 'M2') {
           return {
             baseGeom: roundedArea,
+            rawBaseGeom: areaTri,
             formulaStr: `((${base}m × ${hTri}m) / 2) = ${roundedArea}m²`,
           };
         }
@@ -168,7 +170,7 @@ export function computeGeometryBase(row, unit = 'M3') {
         const formulaStr = length !== null && length > 0
           ? `(((${base}m × ${hTri}m) / 2) × ${length}m) = ${roundedVol}m³`
           : `((${base}m × ${hTri}m) / 2) = ${roundedVol}m³`;
-        return { baseGeom: roundedVol, formulaStr };
+        return { baseGeom: roundedVol, rawBaseGeom: vol, formulaStr };
       }
       break;
     }
@@ -200,9 +202,11 @@ export function computeGeometryBase(row, unit = 'M3') {
         const roundedArea = round2(areaTri);
 
         if (normUnit === 'M' || normUnit === 'ML') {
-          const perim = round2(a + b + c);
+          const rawPerim = a + b + c;
+          const perim = round2(rawPerim);
           return {
             baseGeom: perim,
+            rawBaseGeom: rawPerim,
             formulaStr: `(${a}m + ${b}m + ${c}m) = ${perim}m`,
           };
         }
@@ -211,6 +215,7 @@ export function computeGeometryBase(row, unit = 'M3') {
           const formulaStr = `√[${round2(s)} × ${round2(s - a)} × ${round2(s - b)} × ${round2(s - c)}] = ${roundedArea}m²`;
           return {
             baseGeom: roundedArea,
+            rawBaseGeom: areaTri,
             formulaStr,
           };
         }
@@ -225,7 +230,7 @@ export function computeGeometryBase(row, unit = 'M3') {
           ? `[√[${round2(s)} × ${round2(s - a)} × ${round2(s - b)} × ${round2(s - c)}] × ${lenVal}m] = ${roundedVol}m³`
           : `√[${round2(s)} × ${round2(s - a)} × ${round2(s - b)} × ${round2(s - c)}] = ${roundedVol}m³`;
 
-        return { baseGeom: roundedVol, formulaStr };
+        return { baseGeom: roundedVol, rawBaseGeom: vol, formulaStr };
       }
       break;
     }
@@ -266,15 +271,15 @@ export function computeGeometryBase(row, unit = 'M3') {
         const roundedArea = round2(areaTrap);
         if (normUnit === 'M2') {
           const formulaStr = `(((${bMaj}m + ${bMin}m) × ${h}m) / 2) = ${roundedArea}m²`;
-          return { baseGeom: roundedArea, formulaStr };
+          return { baseGeom: roundedArea, rawBaseGeom: areaTrap, formulaStr };
         }
         const lenVal = len !== null && len > 0 ? len : 1;
         const vol = areaTrap * lenVal;
         const roundedVol = round2(vol);
-        const formulaStr = lenVal > 1
+        const formulaStr = len !== null && len > 0 && lenVal !== 1
           ? `[(((${bMaj}m + ${bMin}m) × ${h}m) / 2) × ${lenVal}m] = ${roundedVol}m³`
           : `(((${bMaj}m + ${bMin}m) × ${h}m) / 2) = ${roundedVol}m³`;
-        return { baseGeom: roundedVol, formulaStr };
+        return { baseGeom: roundedVol, rawBaseGeom: vol, formulaStr };
       }
       break;
     }
@@ -292,7 +297,7 @@ export function computeGeometryBase(row, unit = 'M3') {
         const vol = (h / 3) * (a1 + a2 + Math.sqrt(a1 * a2));
         const roundedVol = round2(vol);
         const formulaStr = `(${h}m / 3) × [(${l1}m)² + (${l2 || 0}m)² + √(${round2(a1)} × ${round2(a2)})] = ${roundedVol}m³`;
-        return { baseGeom: roundedVol, formulaStr };
+        return { baseGeom: roundedVol, rawBaseGeom: vol, formulaStr };
       }
       break;
     }
@@ -304,9 +309,10 @@ export function computeGeometryBase(row, unit = 'M3') {
       const h = parseNum(row.height);
 
       if (l !== null && l > 0 && w !== null && w > 0 && h !== null && h > 0) {
-        const vExc = round2(l * w * h);
+        const rawExc = l * w * h;
+        const vExc = round2(rawExc);
         const formulaStr = `${l}m × ${w}m × ${h}m = ${vExc}m³`;
-        return { baseGeom: vExc, formulaStr };
+        return { baseGeom: vExc, rawBaseGeom: rawExc, formulaStr };
       }
       break;
     }

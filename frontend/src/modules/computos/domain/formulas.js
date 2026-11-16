@@ -144,10 +144,10 @@ function computePartial(p, parentUnit = '') {
   }
 
   // Cálculo de acero de refuerzo (Cabillas)
-  const isSteel = isSteelRow(p) || Boolean(p.rebarDiameter) || normUnit === 'KG';
+  const isSteel = (isSteelRow(p) || Boolean(p.rebarDiameter)) && w === null;
   if (isSteel && l !== null && h !== null && f !== null && l > 0 && h > 0 && f > 0) {
-    const unitWeight = round2(l * h * f);
-    const parcial = round2(unitWeight * t);
+    const rawUnitWeight = l * h * f;
+    const parcial = round2(rawUnitWeight * t);
     p.partial = parcial;
     p.formula = t !== 1
       ? `${t} × (${l}m × ${h} barras × ${f} kg/m) = ${parcial} kg`
@@ -164,7 +164,8 @@ function computePartial(p, parentUnit = '') {
         (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0))
       );
       const effectiveDist = is3DGeometryWithDistance ? 1 : multDist;
-      const parcial = round2(geomResult.baseGeom * multFactor * effectiveDist * t);
+      const rawBase = geomResult.rawBaseGeom ?? geomResult.baseGeom;
+      const parcial = round2(rawBase * multFactor * effectiveDist * t);
       p.partial = parcial;
       p.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
       if (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0)) {
@@ -335,7 +336,7 @@ function recomputeRow(row, field, value) {
   }
 
   // Cálculo de acero de refuerzo (Cabillas)
-  const isSteel = isSteelRow(updated) || Boolean(updated.rebarDiameter) || updated.unit === 'KG';
+  const isSteel = (isSteelRow(updated) || Boolean(updated.rebarDiameter)) && w === null;
   if (isSteel && l !== null && h !== null && f !== null && l > 0 && h > 0 && f > 0) {
     const unitWeight = round2(l * h * f);
     const total = round2(unitWeight * t);
@@ -358,8 +359,10 @@ function recomputeRow(row, field, value) {
         String(updated.unit || '').trim().toUpperCase() === 'M3'
       );
       const effectiveDist = is3DGeometryWithDistance ? 1 : multDist;
-      const parcial = round2(geomResult.baseGeom * multFactor * effectiveDist);
-      const total = round2(parcial * t);
+      const rawBase = geomResult.rawBaseGeom ?? geomResult.baseGeom;
+      const rawParcial = rawBase * multFactor * effectiveDist;
+      const parcial = round2(rawParcial);
+      const total = round2(rawParcial * t);
       updated.partial = parcial;
       updated.quantity = total;
       updated.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
@@ -380,12 +383,13 @@ function recomputeRow(row, field, value) {
 
   if (dims.length > 0) {
     const baseGeom = dims.reduce((acc, curr) => acc * curr, 1);
-    
+    const rawParcial = baseGeom * multFactor * multDist;
+
     // Parcial = base geométrica * Factor * Distancia (para 1 vez)
-    const parcial = round2(baseGeom * multFactor * multDist);
-    
-    // Total = Parcial * N° Veces
-    const total = round2(parcial * t);
+    const parcial = round2(rawParcial);
+
+    // Total = Parcial * N° Veces (sin doble redondeo intermedio)
+    const total = round2(rawParcial * t);
 
     updated.partial = parcial;
     updated.quantity = total;
@@ -416,11 +420,12 @@ function recomputeRow(row, field, value) {
     updated._ownFormula = updated.formula;
   } else if (m3Val !== null && !isNaN(m3Val) && m3Val > 0) {
     // Si no hay dimensiones pero hay volumen M3 directo (ej. transporte M3-KM o botes)
+    const rawParcial = m3Val * multFactor * multDist;
     // Parcial = volumen M3 * Factor * Distancia (para 1 vez)
-    const parcial = round2(m3Val * multFactor * multDist);
-    
-    // Total = Parcial * N° Veces
-    const total = round2(parcial * t);
+    const parcial = round2(rawParcial);
+
+    // Total = Parcial * N° Veces (sin doble redondeo intermedio)
+    const total = round2(rawParcial * t);
 
     updated.partial = parcial;
     updated.quantity = total;
