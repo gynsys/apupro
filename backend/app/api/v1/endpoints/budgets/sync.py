@@ -2,11 +2,16 @@
 Budget synchronization endpoints: Update unit prices from Cost360 master catalog or historical databases.
 Supports Maprex-style granular updating, versioning, inflation adjustment, and quantity scaling.
 """
+import base64
+import io
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session, selectinload
@@ -42,6 +47,178 @@ def _resolve_schema_name(db: Session, database_id: str) -> str:
         {"sname": clean_id},
     ).fetchone()
     return clean_id if row else "public"
+
+
+def _collect_audit_rows(
+    budget_obj: Any,
+    before_mat: Dict[Any, float],
+    before_eq: Dict[Any, float],
+    before_lab: Dict[Any, float],
+    unmatched_mat_ids: Set[Any],
+    unmatched_eq_ids: Set[Any],
+    unmatched_lab_ids: Set[Any],
+) -> Tuple[List[Tuple[Any, ...]], List[Tuple[Any, ...]], List[Tuple[Any, ...]]]:
+    """Construye filas únicas de auditoría para Materiales, Equipos y Mano de Obra."""
+    mat_rows: List[Tuple[Any, ...]] = []
+    eq_rows: List[Tuple[Any, ...]] = []
+    lab_rows: List[Tuple[Any, ...]] = []
+    seen_mat: Set[Tuple[Any, ...]] = set()
+    seen_eq: Set[Tuple[Any, ...]] = set()
+    seen_lab: Set[Tuple[Any, ...]] = set()
+
+    for it in (budget_obj.items or []):
+        if it.is_chapter:
+            continue
+
+        for m in (it.materials or []):
+            old_p = round(float(before_mat.get(m.id, m.precio_unitario or 0.0)), 4)
+            new_p = round(float(m.precio_unitario or 0.0), 4)
+            if m.id in unmatched_mat_ids:
+                estado = "No encontrado en base"
+            elif abs(new_p - old_p) > 1e-4:
+                estado = "Actualizado (con variación)"
+            else:
+                estado = "Sin variación"
+            key = (str(m.codigo or ""), str(m.descripcion or ""), str(m.unidad or ""), old_p, new_p, estado)
+            if key not in seen_mat:
+                seen_mat.add(key)
+                mat_rows.append(key)
+
+        for eq in (it.equipments or []):
+            old_p = round(float(before_eq.get(eq.id, eq.precio_unitario or 0.0)), 4)
+            new_p = round(float(eq.precio_unitario or 0.0), 4)
+            if eq.id in unmatched_eq_ids:
+                estado = "No encontrado en base"
+            elif abs(new_p - old_p) > 1e-4:
+                estado = "Actualizado (con variación)"
+            else:
+                estado = "Sin variación"
+            key = (str(eq.codigo or ""), str(eq.descripcion or ""), str(eq.unidad or "día"), old_p, new_p, estado)
+            if key not in seen_eq:
+                seen_eq.add(key)
+                eq_rows.append(key)
+
+        for lab in (it.labors or []):
+            old_p = round(float(before_lab.get(lab.id, float(lab.jornal or 0.0) + float(lab.bono or 0.0))), 4)
+            new_p = round(float(lab.jornal or 0.0) + float(lab.bono or 0.0), 4)
+            if lab.id in unmatched_lab_ids:
+                estado = "No encontrado en base"
+            elif abs(new_p - old_p) > 1e-4:
+                estado = "Actualizado (con variación)"
+            else:
+                estado = "Sin variación"
+            key = (str(lab.codigo or ""), str(lab.descripcion or ""), "día", old_p, new_p, estado)
+            if key not in seen_lab:
+                seen_lab.add(key)
+                lab_rows.append(key)
+
+    return mat_rows, eq_rows, lab_rows
+
+
+def _build_sync_audit_excel(
+    budget_name: str,
+    old_total: float,
+    new_total: float,
+    diff_percent: float,
+    mat_rows: List[Tuple[Any, ...]],
+    eq_rows: List[Tuple[Any, ...]],
+    lab_rows: List[Tuple[Any, ...]],
+) -> Tuple[str, str]:
+    """Genera un libro Excel (.xlsx) en base64 con 3 hojas para auditar la actualización."""
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    banner_fill = PatternFill(start_color="0F172A", end_color="0F172A", fill_type="solid")
+    header_fill = PatternFill(start_color="D97706", end_color="D97706", fill_type="solid")
+    varied_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+    thin_border = Border(
+        left=Side(style="thin", color="CBD5E1"),
+        right=Side(style="thin", color="CBD5E1"),
+        top=Side(style="thin", color="CBD5E1"),
+        bottom=Side(style="thin", color="CBD5E1"),
+    )
+
+    sheets_spec = [
+        ("Materiales", "Material", mat_rows),
+        ("Equipos", "Equipo", eq_rows),
+        ("Mano de Obra", "Mano de Obra", lab_rows),
+    ]
+
+    for sheet_title, item_label, rows in sheets_spec:
+        ws = wb.create_sheet(title=sheet_title)
+        ws.freeze_panes = "A3"
+
+        ws.merge_cells("A1:H1")
+        ws["A1"] = (
+            f"Auditoría de Actualización · {sheet_title} — {budget_name} | "
+            f"Total: {old_total:,.2f} → {new_total:,.2f} ({diff_percent:+.2f}%)"
+        )
+        ws["A1"].font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        ws["A1"].fill = banner_fill
+        ws["A1"].alignment = Alignment(horizontal="left", vertical="center", indent=1)
+        ws.row_dimensions[1].height = 24
+
+        headers = [
+            "Código",
+            item_label,
+            "Unidad",
+            "Precio Original",
+            "Precio Actualizado",
+            "Delta",
+            "% Variación",
+            "Estado",
+        ]
+        ws.append(headers)
+        ws.row_dimensions[2].height = 22
+        for col_idx in range(1, 9):
+            cell = ws.cell(row=2, column=col_idx)
+            cell.font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(
+                horizontal="right" if col_idx in (4, 5, 6, 7) else "left",
+                vertical="center",
+            )
+
+        for r_idx, (codigo, nombre, unidad, old_p, new_p, estado) in enumerate(rows, start=3):
+            delta = round(new_p - old_p, 4)
+            pct = ((new_p - old_p) / old_p) if old_p > 0 else (1.0 if new_p > 0 else 0.0)
+            varied = abs(delta) > 1e-4
+
+            ws.append([codigo, nombre, unidad, old_p, new_p, delta, pct, estado])
+
+            row_font = Font(name="Calibri", size=10, italic=varied, color="0F172A")
+            delta_color = "15803D" if delta > 1e-4 else ("B91C1C" if delta < -1e-4 else "0F172A")
+            delta_font = Font(name="Calibri", size=10, italic=varied, bold=varied, color=delta_color)
+
+            for c_idx in range(1, 9):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.border = thin_border
+                cell.font = delta_font if c_idx in (6, 7) else row_font
+                if varied:
+                    cell.fill = varied_fill
+                if c_idx in (4, 5):
+                    cell.number_format = "#,##0.00"
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                elif c_idx == 6:
+                    cell.number_format = "+#,##0.00;-#,##0.00;0.00"
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                elif c_idx == 7:
+                    cell.number_format = "+0.00%;-0.00%;0.00%"
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+                else:
+                    cell.alignment = Alignment(horizontal="left", vertical="center")
+
+        col_widths = [16, 48, 10, 16, 18, 14, 14, 24]
+        for idx, width in enumerate(col_widths, start=1):
+            ws.column_dimensions[get_column_letter(idx)].width = width
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+    safe_name = re.sub(r"[^a-zA-Z0-9_-]+", "_", (budget_name or "Presupuesto").strip()).strip("_")
+    filename = f"Auditoria_Actualizacion_{safe_name or 'Presupuesto'}.xlsx"
+    return encoded, filename
 
 
 class BudgetAdvancedSyncRequest(BaseModel):
@@ -214,6 +391,22 @@ def sync_budget_advanced(
     updated_performances = 0
     updated_depreciations = 0
     updated_descriptions = 0
+
+    before_mat: Dict[Any, float] = {}
+    before_eq: Dict[Any, float] = {}
+    before_lab: Dict[Any, float] = {}
+    unmatched_mat_ids: Set[Any] = set()
+    unmatched_eq_ids: Set[Any] = set()
+    unmatched_lab_ids: Set[Any] = set()
+    for it in (target_budget.items or []):
+        if it.is_chapter:
+            continue
+        for m in (it.materials or []):
+            before_mat[m.id] = float(m.precio_unitario or 0.0)
+        for eq in (it.equipments or []):
+            before_eq[eq.id] = float(eq.precio_unitario or 0.0)
+        for lab in (it.labors or []):
+            before_lab[lab.id] = float(lab.jornal or 0.0) + float(lab.bono or 0.0)
 
     # =========================================================================
     # CASO A: Multiplicador de Cantidades (Pestaña 3)
@@ -448,6 +641,7 @@ def sync_budget_advanced(
                     updated_materials += 1
                 else:
                     unmatched_materials.add(f"{m.codigo} ({m.descripcion[:30] if m.descripcion else 'Material'})")
+                    unmatched_mat_ids.add(m.id)
 
             # Actualizar Equipos
             for eq in (it.equipments or []):
@@ -472,6 +666,7 @@ def sync_budget_advanced(
                     updated_equipments += 1
                 else:
                     unmatched_equipments.add(f"{eq.codigo} ({eq.descripcion[:30] if eq.descripcion else 'Equipo'})")
+                    unmatched_eq_ids.add(eq.id)
 
             # Actualizar Mano de Obra
             for lab in (it.labors or []):
@@ -495,6 +690,7 @@ def sync_budget_advanced(
                         updated_labors += 1
                     else:
                         unmatched_labors.add(f"{lab.codigo} ({lab.descripcion[:30] if lab.descripcion else 'Mano de Obra'})")
+                        unmatched_lab_ids.add(lab.id)
 
         db.commit()
 
@@ -502,6 +698,30 @@ def sync_budget_advanced(
     _, new_total = compute_budget_summary_metrics(target_budget)
     diff_amount = round(new_total - old_total, 2)
     diff_percent = round((diff_amount / old_total * 100.0) if old_total > 0 else 0.0, 2)
+
+    audit_excel_base64: Optional[str] = None
+    audit_excel_filename: Optional[str] = None
+    try:
+        mat_rows, eq_rows, lab_rows = _collect_audit_rows(
+            target_budget,
+            before_mat,
+            before_eq,
+            before_lab,
+            unmatched_mat_ids,
+            unmatched_eq_ids,
+            unmatched_lab_ids,
+        )
+        audit_excel_base64, audit_excel_filename = _build_sync_audit_excel(
+            target_budget.name,
+            old_total,
+            new_total,
+            diff_percent,
+            mat_rows,
+            eq_rows,
+            lab_rows,
+        )
+    except Exception as exc:
+        logger.error("Error generando Excel de auditoría de actualización: %s", exc, exc_info=True)
 
     actions_done = []
     if updated_materials > 0 or updated_equipments > 0 or updated_labors > 0:
@@ -537,6 +757,8 @@ def sync_budget_advanced(
         "new_total": new_total,
         "diff_amount": diff_amount,
         "diff_percent": diff_percent,
+        "audit_excel_base64": audit_excel_base64,
+        "audit_excel_filename": audit_excel_filename,
         "message": (
             f"Nueva versión '{target_budget.name}' creada exitosamente{summary_str}. Variación: {diff_amount:+,.2f} ({diff_percent:+.2f}%)."
             if req.create_new_version

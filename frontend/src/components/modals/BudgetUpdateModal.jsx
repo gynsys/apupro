@@ -162,6 +162,28 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
       }
 
       const res = await budgetService.syncAdvanced(budget.id, payload);
+      if (res?.audit_excel_base64) {
+        try {
+          const byteChars = window.atob(res.audit_excel_base64);
+          const byteNumbers = new Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i += 1) {
+            byteNumbers[i] = byteChars.charCodeAt(i);
+          }
+          const blob = new Blob([new Uint8Array(byteNumbers)], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', res.audit_excel_filename || 'Auditoria_Actualizacion.xlsx');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (downloadErr) {
+          console.warn('No se pudo descargar automáticamente el Excel de auditoría:', downloadErr);
+        }
+      }
       toast.success(res.message || 'Presupuesto actualizado correctamente', { duration: 5000 });
       onClose();
       if (typeof onSuccess === 'function') {
