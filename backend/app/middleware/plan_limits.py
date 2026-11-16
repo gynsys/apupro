@@ -6,36 +6,18 @@ from app.db.models.budget import Budget, BudgetItem
 from app.db.arko_base import ArkoSessionLocal
 
 def check_budget_limit(current_user: Any) -> None:
-    """Verifica si el usuario puede crear más presupuestos"""
+    """Verifica autenticación antes de crear presupuestos (sin límite para uso gratuito)."""
     if current_user is None:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
+    return
 
-    if current_user.max_budgets is None:
-        return  # Sin límite para admins con planes superiores
-
-    with ArkoSessionLocal() as db:
-        budget_count = db.query(Budget).filter(Budget.user_id == str(current_user.id)).count()
-        if budget_count >= current_user.max_budgets:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Límite de presupuestos alcanzado. Tu plan permite máximo {current_user.max_budgets} presupuestos."
-            )
 
 def check_items_limit(current_user: Any, budget_id: str) -> None:
-    """Verifica si el usuario puede agregar más partidas a un presupuesto"""
+    """Verifica autenticación antes de agregar partidas (sin límite para uso gratuito)."""
+    _ = budget_id
     if current_user is None:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
-
-    if current_user.max_items_per_budget is None:
-        return  # Sin límite para admins con planes superiores
-
-    with ArkoSessionLocal() as db:
-        items_count = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id).count()
-        if items_count >= current_user.max_items_per_budget:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Límite de partidas alcanzado. Tu plan permite máximo {current_user.max_items_per_budget} partidas por presupuesto."
-            )
+    return
 
 def check_ai_access(current_user: Any) -> None:
     """Verifica si el usuario tiene acceso a IA"""

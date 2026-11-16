@@ -294,7 +294,9 @@ export default function BudgetAPUEditorPage() {
       if (!budget || !item) {
         setLoading(true);
       }
-      const budgetData = await budgetService.getById(id);
+      const budgetData = id === 'example-demo'
+        ? await budgetService.getExampleDemo()
+        : await budgetService.getById(id);
       setBudget(budgetData);
       const foundItem = budgetData.items?.find(i => i.id === itemId);
       if (!foundItem) {

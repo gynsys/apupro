@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { FaTools, FaFileUpload } from 'react-icons/fa';
 import { AuthContext } from '../../context/AuthContext';
+import LoginModal from '../landing/LoginModal';
+import RegisterModal from '../landing/RegisterModal';
 import SubscriptionRequestModal from '../SubscriptionRequestModal';
 import ReportPaymentModal from '../ReportPaymentModal';
 import BudgetFileImportModal from '../modals/BudgetFileImportModal';
@@ -30,7 +32,7 @@ const NAV_ITEMS = [
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout, checkAuth } = useContext(AuthContext);
+  const { isAuthenticated, user, logout, checkAuth, authModalMode, openAuthModal, closeAuthModal } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -147,6 +149,10 @@ export default function AppLayout() {
             type="button"
             onClick={() => {
               setSidebarOpen(false);
+              if (!isAuthenticated) {
+                openAuthModal('register');
+                return;
+              }
               setShowImportChoiceModal(true);
             }}
             aria-label="Importar Presupuesto desde Archivo"
@@ -173,6 +179,10 @@ export default function AppLayout() {
             type="button"
             onClick={() => {
               setSidebarOpen(false);
+              if (!isAuthenticated) {
+                openAuthModal('register');
+                return;
+              }
               setShowBudgetComputosModal(true);
             }}
             aria-label="Planilla de Cómputos"
@@ -340,9 +350,22 @@ export default function AppLayout() {
             </button>
           </div>
         ) : (
-          <Link to="/login" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-            Iniciar Sesión
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => openAuthModal('login')}
+              className="px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              Iniciar sesión
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthModal('register')}
+              className="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors cursor-pointer"
+            >
+              Crear cuenta gratis
+            </button>
+          </div>
         )}
       </header>
 
@@ -579,6 +602,18 @@ export default function AppLayout() {
       <HelpDrawer
         isOpen={showHelpDrawer}
         onClose={() => setShowHelpDrawer(false)}
+      />
+
+      <LoginModal
+        isOpen={authModalMode === 'login'}
+        onClose={closeAuthModal}
+        onSwitchToRegister={() => openAuthModal('register')}
+      />
+
+      <RegisterModal
+        isOpen={authModalMode === 'register'}
+        onClose={closeAuthModal}
+        onSwitchToLogin={() => openAuthModal('login')}
       />
     </div>
   );

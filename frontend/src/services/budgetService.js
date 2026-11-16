@@ -31,6 +31,19 @@ const getAuthHeaders = () => {
 };
 
 export const budgetService = {
+  // GUEST EXAMPLE DEMO
+  getExampleDemoSummary: async () => {
+    const response = await fetch(`${API_URL}/budgets/example-demo/summary`);
+    if (!response.ok) throw new Error('Error al cargar presupuesto de ejemplo');
+    return response.json();
+  },
+
+  getExampleDemo: async () => {
+    const response = await fetch(`${API_URL}/budgets/example-demo`);
+    if (!response.ok) throw new Error('Error al cargar presupuesto de ejemplo');
+    return response.json();
+  },
+
   // BUDGETS
   getAll: async () => {
     if (isDeviceOfflineModeActive() && typeof navigator !== 'undefined' && navigator.onLine === false) {

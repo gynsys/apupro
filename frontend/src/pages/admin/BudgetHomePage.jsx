@@ -53,7 +53,7 @@ function buildTotalsMap(list) {
 }
 
 export default function BudgetHomePage() {
-  const { user } = useContext(AuthContext) || {};
+  const { isAuthenticated, user, openAuthModal } = useContext(AuthContext) || {};
   const currentUserId = user?.id || user?.email || null;
   const isSuperAdmin = Boolean(
     user?.is_superadmin === true ||
@@ -97,13 +97,22 @@ export default function BudgetHomePage() {
 
   const [budgetTotals, setBudgetTotals] = useState(() => buildTotalsMap(initialCached));
 
+  const requireRegistration = useCallback((actionLabel = 'realizar esta acción') => {
+    if (isAuthenticated) return true;
+    toast(`Regístrate gratis para ${actionLabel}`, { icon: '✨' });
+    openAuthModal?.('register');
+    return false;
+  }, [isAuthenticated, openAuthModal]);
+
   const loadBudgets = useCallback(async (silent = false) => {
     try {
       if (!silent && budgets.length === 0) {
         setLoading(true);
       }
       lastFetchRef.current = Date.now();
-      const data = await budgetService.getAll();
+      const data = isAuthenticated
+        ? await budgetService.getAll()
+        : await budgetService.getExampleDemoSummary();
       setBudgets(data);
       if (currentUserId) {
         try {
@@ -140,7 +149,7 @@ export default function BudgetHomePage() {
     } finally {
       setLoading(false);
     }
-  }, [budgets.length]);
+  }, [budgets.length, isAuthenticated, currentUserId]);
 
   const handleImportChoice = (selectedFile, mode) => {
     setIsImportChoiceOpen(false);
@@ -151,7 +160,7 @@ export default function BudgetHomePage() {
 
   useEffect(() => {
     loadBudgets(Boolean(initialCached));
-  }, [currentUserId]);
+  }, [currentUserId, isAuthenticated]);
 
   // Un presupuesto compartido por otro usuario aparece sin refrescar la página, sin parpadeo de spinner.
   useEffect(() => {
@@ -399,7 +408,10 @@ export default function BudgetHomePage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
               {/* Botón Nuevo */}
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  if (!requireRegistration('crear un presupuesto nuevo')) return;
+                  setIsModalOpen(true);
+                }}
                 className="group flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-4 rounded-xl font-medium shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target w-full sm:w-auto whitespace-nowrap shrink-0 text-xs sm:text-sm cursor-pointer"
               >
                 <Plus size={18} className="group-hover:scale-110 group-hover:rotate-90 transition-transform duration-300 shrink-0" />
@@ -408,7 +420,10 @@ export default function BudgetHomePage() {
 
               {/* Botón Desde Archivos */}
               <button
-                onClick={() => setIsImportChoiceOpen(true)}
+                onClick={() => {
+                  if (!requireRegistration('importar presupuestos desde archivos')) return;
+                  setIsImportChoiceOpen(true);
+                }}
                 className="group flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 text-white px-4 sm:px-4 rounded-xl font-medium shadow-md shadow-sky-600/20 hover:shadow-lg hover:shadow-sky-600/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target w-full sm:w-auto whitespace-nowrap shrink-0 text-xs sm:text-sm cursor-pointer"
                 title="Importar presupuesto desde archivo (Excel, APU, etc.)"
               >
@@ -418,7 +433,10 @@ export default function BudgetHomePage() {
 
               {isSuperAdmin && (
                 <button
-                  onClick={() => setIsMdbImportOpen(true)}
+                  onClick={() => {
+                    if (!requireRegistration('importar desde .mdb')) return;
+                    setIsMdbImportOpen(true);
+                  }}
                   className="group flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 text-white px-4 sm:px-4 rounded-xl font-medium shadow-md shadow-indigo-500/20 hover:shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target w-full sm:w-auto whitespace-nowrap shrink-0 text-xs sm:text-sm cursor-pointer"
                   title="Importar presupuesto desde base de datos (.mdb)"
                 >
@@ -430,7 +448,10 @@ export default function BudgetHomePage() {
               {/* Botones Secundarios: 2 columnas en móvil, inline en desktop */}
               <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    if (!requireRegistration('importar un respaldo')) return;
+                    fileInputRef.current?.click();
+                  }}
                   disabled={importingBackup}
                   className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 sm:px-4 rounded-xl font-medium shadow-md shadow-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed h-[44px] touch-target text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
                 >
@@ -438,7 +459,10 @@ export default function BudgetHomePage() {
                   <span className="truncate">{importingBackup ? 'Importando...' : 'Importar Backup'}</span>
                 </button>
                 <button
-                  onClick={() => setIsImportSharedOpen(true)}
+                  onClick={() => {
+                    if (!requireRegistration('importar desde un enlace')) return;
+                    setIsImportSharedOpen(true);
+                  }}
                   className="group flex items-center justify-center gap-1.5 sm:gap-2 bg-[#B5DCB0] hover:bg-[#a1d39b] text-[#143d1a] border border-[#9ecc98] px-3 sm:px-4 rounded-xl font-semibold shadow-md shadow-[#B5DCB0]/30 hover:shadow-lg hover:shadow-[#B5DCB0]/40 hover:-translate-y-0.5 transition-all duration-300 ease-out h-[44px] touch-target text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Link2 size={18} className="group-hover:scale-110 transition-transform duration-300 text-[#143d1a] shrink-0" />
@@ -555,56 +579,56 @@ export default function BudgetHomePage() {
                 {/* Barra de Acciones Rápidas: En móvil se ubica abajo con borde separador; en desktop a la derecha */}
                 <div className="acciones-rapidas flex items-center justify-between md:justify-end gap-1 w-full md:w-auto shrink-0 pt-2.5 md:pt-0 border-t md:border-t-0 border-amber-200/60 overflow-x-auto no-scrollbar">
                   <button
-                    onClick={(e) => { e.stopPropagation(); setDuplicatingBudget(budget); setDuplicateName((budget.name || budget.project_name || 'Presupuesto') + ' (Copia)'); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('duplicar este presupuesto')) return; setDuplicatingBudget(budget); setDuplicateName((budget.name || budget.project_name || 'Presupuesto') + ' (Copia)'); }}
                     className="btn-accion"
                     title="Duplicar"
                   >
                     <Copy size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setSettingsBudget(budget); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('editar la configuración global')) return; setSettingsBudget(budget); }}
                     className="btn-accion"
                     title="Configuración Global"
                   >
                     <Settings size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setPrintBudget(budget); setPrintModalOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('imprimir este presupuesto')) return; setPrintBudget(budget); setPrintModalOpen(true); }}
                     className="btn-accion"
                     title="Imprimir"
                   >
                     <Printer size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleExportToExcel(budget); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('exportar a Excel')) return; handleExportToExcel(budget); }}
                     className="btn-accion"
                     title="Exportar a Excel"
                   >
                     <FileSpreadsheet size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleBackupExport(budget); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('exportar un respaldo')) return; handleBackupExport(budget); }}
                     className="btn-accion"
                     title="Exportar Backup"
                   >
                     <CloudDownload size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setSharingBudget(budget); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('compartir este presupuesto')) return; setSharingBudget(budget); }}
                     className="btn-accion hover:text-amber-600 transition-colors"
                     title="Compartir enlace en la nube"
                   >
                     <Share2 size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setRenamingBudget(budget); setRenameName(budget.name || budget.project_name || ''); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('renombrar este presupuesto')) return; setRenamingBudget(budget); setRenameName(budget.name || budget.project_name || ''); }}
                     className="btn-accion"
                     title="Editar Nombre"
                   >
                     <Edit3 size={18} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); confirmDelete(budget.id); }}
+                    onClick={(e) => { e.stopPropagation(); if (!requireRegistration('eliminar este presupuesto')) return; confirmDelete(budget.id); }}
                     className="btn-accion hover:text-red-600"
                     title="Eliminar"
                   >

@@ -4,7 +4,7 @@ Helper utilities and database checks for budget endpoints.
 import json
 import math
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -169,9 +169,12 @@ def log_backup_action(
         logger.error(f"Error al registrar accion de backup en auditoria: {e}", exc_info=True)
 
 
+EXAMPLE_BUDGET_NAME = "Presupuesto de ejemplo Kosto"
+
+
 def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[Budget]:
     """
-    Crea o clona el 'Presupuesto de Ejemplo costbase.net' para un usuario si no posee ningún presupuesto.
+    Crea o clona el 'Presupuesto de ejemplo Kosto' para un usuario si no posee ningún presupuesto.
     """
     target_user_id_str = str(target_user_id).strip()
     if not target_user_id_str:
@@ -183,13 +186,13 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
             return existing
 
         template = db.query(Budget).filter(
-            Budget.name == "Presupuesto de Ejemplo costbase.net"
+            Budget.name.in_([EXAMPLE_BUDGET_NAME, "Presupuesto de Ejemplo costbase.net"])
         ).first()
 
         if template:
             new_budget = Budget(
                 user_id=target_user_id_str,
-                name=template.name,
+                name=EXAMPLE_BUDGET_NAME,
                 description=template.description,
                 currency=template.currency,
                 exchange_rate=template.exchange_rate,
@@ -204,7 +207,7 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
                 equipment_inflation=template.equipment_inflation,
                 company_name=template.company_name,
                 company_rif=template.company_rif,
-                project_name=template.project_name,
+                project_name=EXAMPLE_BUDGET_NAME,
                 client_name=template.client_name,
                 ubicacion=template.ubicacion,
                 notes=template.notes
@@ -271,7 +274,7 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
 
             new_budget = Budget(
                 user_id=target_user_id_str,
-                name=data.get("name", "Presupuesto de Ejemplo costbase.net"),
+                name=EXAMPLE_BUDGET_NAME,
                 description=data.get("description"),
                 currency=data.get("currency", "USD"),
                 exchange_rate=data.get("exchange_rate", 1.0),
@@ -286,7 +289,7 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
                 equipment_inflation=data.get("equipment_inflation", 0.0),
                 company_name=data.get("company_name", ""),
                 company_rif=data.get("company_rif", ""),
-                project_name=data.get("project_name", ""),
+                project_name=EXAMPLE_BUDGET_NAME,
                 client_name=data.get("client_name", ""),
                 ubicacion=data.get("ubicacion", ""),
                 notes=data.get("notes")
@@ -350,3 +353,116 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
         return None
 
     return None
+
+
+def get_example_budget_demo_payload(db: Session) -> Dict[str, Any]:
+    """Retorna el 'Presupuesto de ejemplo Kosto' para modo invitado sin autenticación."""
+    template = (
+        db.query(Budget)
+        .filter(Budget.name.in_([EXAMPLE_BUDGET_NAME, "Presupuesto de Ejemplo costbase.net"]))
+        .first()
+    )
+    if template:
+        items_count, total_amount = compute_budget_summary_metrics(template)
+        items_payload: List[Dict[str, Any]] = []
+        for item in sorted(template.items or [], key=lambda x: (x.order or 0, str(x.id))):
+            items_payload.append({
+                "id": str(item.id),
+                "budget_id": "example-demo",
+                "cod_par": item.cod_par,
+                "cov_par": item.cov_par,
+                "description": item.description,
+                "unit": item.unit,
+                "quantity": item.quantity,
+                "performance": item.performance,
+                "order": item.order,
+                "is_chapter": item.is_chapter,
+                "is_pending": item.is_pending,
+                "materials": [
+                    {
+                        "id": str(m.id),
+                        "budget_item_id": str(item.id),
+                        "codigo": m.codigo,
+                        "descripcion": m.descripcion,
+                        "unidad": m.unidad,
+                        "precio_unitario": m.precio_unitario,
+                        "cantidad": m.cantidad,
+                        "desperdicio": m.desperdicio,
+                    }
+                    for m in (item.materials or [])
+                ],
+                "equipments": [
+                    {
+                        "id": str(e.id),
+                        "budget_item_id": str(item.id),
+                        "codigo": e.codigo,
+                        "descripcion": e.descripcion,
+                        "cantidad": e.cantidad,
+                        "unidad": e.unidad,
+                        "precio_unitario": e.precio_unitario,
+                        "depreciacion": e.depreciacion,
+                    }
+                    for e in (item.equipments or [])
+                ],
+                "labors": [
+                    {
+                        "id": str(l.id),
+                        "budget_item_id": str(item.id),
+                        "codigo": l.codigo,
+                        "descripcion": l.descripcion,
+                        "cantidad": l.cantidad,
+                        "jornal": l.jornal,
+                        "bono": l.bono,
+                    }
+                    for l in (item.labors or [])
+                ],
+            })
+        return {
+            "id": "example-demo",
+            "user_id": "guest",
+            "name": EXAMPLE_BUDGET_NAME,
+            "project_name": EXAMPLE_BUDGET_NAME,
+            "description": template.description,
+            "currency": template.currency,
+            "exchange_rate": template.exchange_rate,
+            "fcas_percent": template.fcas_percent,
+            "admin_percent": template.admin_percent,
+            "profit_percent": template.profit_percent,
+            "iva_percent": template.iva_percent,
+            "labor_bonus": template.labor_bonus,
+            "bono_in_fcas": template.bono_in_fcas,
+            "material_inflation": template.material_inflation,
+            "labor_inflation": template.labor_inflation,
+            "equipment_inflation": template.equipment_inflation,
+            "company_name": template.company_name,
+            "company_rif": template.company_rif,
+            "client_name": template.client_name,
+            "ubicacion": template.ubicacion,
+            "notes": template.notes,
+            "created_at": template.created_at.isoformat() if template.created_at else None,
+            "updated_at": template.updated_at.isoformat() if template.updated_at else None,
+            "items_count": items_count,
+            "total_amount": total_amount,
+            "items": items_payload,
+        }
+
+    fixture_path = Path(__file__).resolve().parent.parent.parent.parent / "modules" / "control_obra" / "fixtures" / "example_budget.json"
+    if fixture_path.exists():
+        with open(fixture_path, encoding="utf-8") as f:
+            data = json.load(f)
+        data["id"] = "example-demo"
+        data["name"] = EXAMPLE_BUDGET_NAME
+        data["project_name"] = EXAMPLE_BUDGET_NAME
+        data["items_count"] = sum(1 for it in data.get("items", []) if not it.get("is_chapter"))
+        data["total_amount"] = 0.0
+        return data
+
+    return {
+        "id": "example-demo",
+        "name": EXAMPLE_BUDGET_NAME,
+        "project_name": EXAMPLE_BUDGET_NAME,
+        "currency": "USD",
+        "items_count": 0,
+        "total_amount": 0.0,
+        "items": [],
+    }

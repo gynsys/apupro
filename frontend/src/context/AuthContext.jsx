@@ -81,6 +81,15 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(initialUser));
   const [user, setUser] = useState(() => initialUser);
   const [loading, setLoading] = useState(() => !initialUser);
+  const [authModalMode, setAuthModalMode] = useState(null);
+
+  const openAuthModal = useCallback((mode = 'register') => {
+    setAuthModalMode(mode);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    setAuthModalMode(null);
+  }, []);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -192,7 +201,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loginWithGoogle, loading, checkAuth }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        user,
+        login,
+        logout,
+        loginWithGoogle,
+        loading,
+        checkAuth,
+        authModalMode,
+        openAuthModal,
+        closeAuthModal,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

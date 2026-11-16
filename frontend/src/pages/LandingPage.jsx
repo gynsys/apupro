@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import HeroSection from '../components/landing/HeroSection';
 import StrategicAlliesSection from '../components/landing/allies/StrategicAlliesSection';
 import FeaturesSection from '../components/landing/FeaturesSection';
@@ -10,6 +11,7 @@ import LoginModal from '../components/landing/LoginModal';
 import RegisterModal from '../components/landing/RegisterModal';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   // Smooth scroll logic (optional, for hash links)
@@ -31,7 +33,10 @@ export default function LandingPage() {
       <HeroSection onLoginClick={() => setIsLoginModalOpen(true)} />
       <FeaturesSection />
       <PreviewSection />
-      <PricingSection onRegisterClick={() => setIsRegisterModalOpen(true)} />
+      <PricingSection
+        onRegisterClick={() => setIsRegisterModalOpen(true)}
+        onTryFreeClick={() => navigate('/budgets')}
+      />
       <StrategicAlliesSection />
       <Footer />
       <LoginModal 

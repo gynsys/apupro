@@ -5,7 +5,7 @@ import { Check } from 'lucide-react';
 const AI_MONTHLY_PRICE = '9.99';
 const AI_MONTHLY_APUS = '30';
 
-export default function PricingSection({ onRegisterClick }) {
+export default function PricingSection({ onRegisterClick, onTryFreeClick }) {
   const plans = [
     {
       name: 'Free',
@@ -98,8 +98,8 @@ export default function PricingSection({ onRegisterClick }) {
               </ul>
 
               <button
-                onClick={onRegisterClick}
-                className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-colors ${
+                onClick={plan.name === 'Free' && onTryFreeClick ? onTryFreeClick : onRegisterClick}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-colors cursor-pointer ${
                   plan.popular
                     ? 'bg-[#1A6BB5] text-white hover:bg-[#134F8A]'
                     : 'bg-slate-700 text-white hover:bg-slate-600'

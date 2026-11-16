@@ -89,7 +89,9 @@ export function useBudgetWorksheet() {
   const loadBudget = async () => {
     try {
       setLoading(true);
-      const data = await budgetService.getById(id);
+      const data = id === 'example-demo'
+        ? await budgetService.getExampleDemo()
+        : await budgetService.getById(id);
 
       // Sincronizar estado pendiente (DB + LocalStorage para máxima persistencia)
       try {

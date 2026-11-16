@@ -152,11 +152,11 @@ function App() {
                   <Route path="/budgets/shared/partida/:token" element={<SharedPartidaPage />} />
                   <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
 
-                  {/* RUTAS DE PRESUPUESTOS (APP - Protegidas) */}
+                  {/* RUTAS DE PRESUPUESTOS (APP - Accesible en modo Free invitado) */}
                   <Route
                     path="/budgets"
                     element={
-                      <ProtectedRoute>
+                      <ProtectedRoute allowGuest>
                         <AppLayout />
                       </ProtectedRoute>
                     }
