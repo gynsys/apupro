@@ -27,7 +27,7 @@ export default function Header({ onLoginClick }) {
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo Section */}
           <div className="flex items-center gap-2.5 sm:gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-lg bg-white p-0.5" />
+            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
             <span className="text-xl sm:text-2xl font-extrabold text-white tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
               Kos<span className="text-amber-400">to</span>
             </span>

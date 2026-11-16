@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto Logo" className="w-8 h-8 object-contain rounded-lg bg-white p-0.5" />
+            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto Logo" className="w-8 h-8 object-contain" />
             <span className="text-xl font-extrabold text-white">
               Kosto
             </span>

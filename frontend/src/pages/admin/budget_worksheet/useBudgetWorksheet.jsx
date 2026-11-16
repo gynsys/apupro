@@ -7,6 +7,7 @@ import { useDatabaseContext } from '../../../contexts/DatabaseContext';
 import { useCostbaseSearch as useCost360Search } from '../../../modules/costbase/hooks/useCostbaseSearch';
 import costbaseService from '../../../modules/costbase/services/costbaseService';
 import { SiteConfigContext } from '../../../App';
+import { AuthContext } from '../../../context/AuthContext';
 import { calculateItemPU, calculateBudgetTotals } from '../../../utils/apuCalculations';
 
 export function useBudgetWorksheet() {
@@ -18,6 +19,7 @@ export function useBudgetWorksheet() {
   const [loading, setLoading] = useState(true);
   const { activeDatabase, setActiveDatabase, databases } = useDatabaseContext();
   const { config } = useContext(SiteConfigContext);
+  const { isAuthenticated, openAuthModal } = useContext(AuthContext) || {};
 
   const [showSettings, setShowSettings] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -280,7 +282,7 @@ export function useBudgetWorksheet() {
         console.error('Error cargando APU:', apuError);
       }
 
-      await budgetService.addItem(id, {
+      const newItemPayload = {
         cod_par: item.CodPar || item.codigo || item.id || '',
         cov_par: item.CovPar || item.cov_par || '',
         description: item.Descri || item.descripcion || item.description || '',
@@ -292,7 +294,36 @@ export function useBudgetWorksheet() {
         materials,
         equipments,
         labors
-      });
+      };
+
+      if (id === 'example-demo' || !isAuthenticated) {
+        const localItem = {
+          ...newItemPayload,
+          id: `demo-item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          budget_id: id,
+          is_pending: false,
+        };
+        setBudget((prev) => {
+          if (!prev) return prev;
+          const prevItems = Array.isArray(prev.items) ? [...prev.items] : [];
+          if (targetOrder > 0) {
+            const insertIdx = prevItems.findIndex((i) => i.id === selectedItemId);
+            if (insertIdx >= 0) {
+              prevItems.splice(insertIdx + 1, 0, localItem);
+            } else {
+              prevItems.push(localItem);
+            }
+          } else {
+            prevItems.push(localItem);
+          }
+          return { ...prev, items: prevItems };
+        });
+        setShowSearchModal(false);
+        toast.success('Partida incluida en el presupuesto de ejemplo');
+        return;
+      }
+
+      await budgetService.addItem(id, newItemPayload);
       setShowSearchModal(false);
       loadBudget();
       toast.success(
@@ -716,6 +747,14 @@ export function useBudgetWorksheet() {
     setShowSearchModal,
     showAIApuModal,
     setShowAIApuModal,
+    openAIApuModal: () => {
+      if (!isAuthenticated) {
+        toast('Regístrate gratis para crear APUs con Inteligencia Artificial', { icon: '✨' });
+        openAuthModal?.('register');
+        return;
+      }
+      setShowAIApuModal(true);
+    },
     searchQuery,
     setSearchQuery,
     searchCovenin,

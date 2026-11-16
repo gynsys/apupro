@@ -346,7 +346,7 @@ export default function BudgetWorksheetView() {
         databases={ws.databases}
         availableBudgets={ws.availableBudgets}
         currentBudgetId={ws.id}
-        onOpenAIApuModal={() => ws.setShowAIApuModal(true)}
+        onOpenAIApuModal={() => ws.openAIApuModal()}
         onOpenImportSharedPartida={() => setShowImportSharedPartida(true)}
         searchQuery={ws.searchQuery}
         setSearchQuery={ws.setSearchQuery}

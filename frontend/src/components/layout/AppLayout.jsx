@@ -86,7 +86,7 @@ export default function AppLayout() {
       {/* Mobile logo header inside drawer */}
       {isMobile && (
         <div className="flex items-center gap-2.5 px-3 mb-5 w-full">
-          <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto" className="w-8 h-8 object-contain rounded-lg bg-white p-0.5 shadow-xs" />
+          <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto" className="w-8 h-8 object-contain" />
           <span className="font-extrabold text-lg text-slate-800 tracking-tight">Kosto</span>
         </div>
       )}
@@ -305,7 +305,7 @@ export default function AppLayout() {
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => navigate('/budgets')}
         >
-          <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto" className="w-8 h-8 object-contain rounded-lg bg-white p-0.5 shadow-xs border border-slate-200/70" />
+          <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto" className="w-8 h-8 object-contain" />
           <span className="text-base sm:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-blue-700 block">
             Kosto
           </span>
