@@ -19,8 +19,11 @@ def check_items_limit(current_user: Any, budget_id: str) -> None:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
     return
 
+FREE_AI_APU_LIMIT = 3
+
+
 def check_ai_access(current_user: Any) -> None:
-    """Verifica si el usuario tiene acceso a IA"""
+    """Verifica si el usuario tiene acceso a IA (3 APUs gratis en plan Free, luego requiere Plan IA)."""
     if current_user is None:
         raise HTTPException(status_code=401, detail="Usuario no autenticado")
 
@@ -32,15 +35,21 @@ def check_ai_access(current_user: Any) -> None:
     if is_super:
         return
 
-    if not getattr(current_user, 'has_ai_access', False):
-        raise HTTPException(
-            status_code=403,
-            detail="No tienes una suscripción activa o permiso para utilizar el Generador de APU asistido por IA. Actualiza tu plan para desbloquear esta función premium."
-        )
-    
-    if current_user.plan != "free" and getattr(current_user, 'max_ai_apus', 0) > 0:
-        if getattr(current_user, 'ai_apus_generated', 0) >= current_user.max_ai_apus:
+    generated = getattr(current_user, 'ai_apus_generated', 0) or 0
+    has_ai = bool(getattr(current_user, 'has_ai_access', False))
+
+    if not has_ai:
+        free_limit = getattr(current_user, 'max_ai_apus', 0) or FREE_AI_APU_LIMIT
+        if generated >= free_limit:
             raise HTTPException(
                 status_code=403,
-                detail=f"Has alcanzado el límite de {current_user.max_ai_apus} APUs generados con IA para tu plan este mes. Actualiza tu plan para continuar."
+                detail=f"Has alcanzado el límite de {free_limit} APUs gratuitos con Inteligencia Artificial. Activa el Plan IA para continuar."
             )
+        return
+
+    max_ai = getattr(current_user, 'max_ai_apus', 0) or 0
+    if max_ai > 0 and generated >= max_ai:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Has alcanzado el límite de {max_ai} APUs generados con IA de tu Plan IA este mes. Actualiza tu plan para continuar."
+        )

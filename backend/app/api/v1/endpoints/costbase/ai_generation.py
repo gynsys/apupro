@@ -238,6 +238,22 @@ def _summarize_long_apu_description(description: str, max_chars: int = 480) -> s
     return _deterministic_compress_description(clean_text, max_chars=max_chars)
 
 
+def _increment_user_ai_apu_count(current_user: Any, result: Any) -> None:
+    """Incrementa el contador de APUs generados con IA cuando la generación fue exitosa."""
+    if not current_user or not isinstance(result, dict):
+        return
+    if result.get("status") not in ("success", "completed") or not result.get("partida"):
+        return
+    try:
+        with ArkoSessionLocal() as adb:
+            db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
+            if db_user:
+                db_user.ai_apus_generated = (getattr(db_user, "ai_apus_generated", 0) or 0) + 1
+                adb.commit()
+    except Exception as exc:
+        logger.warning("No se pudo incrementar ai_apus_generated para %s: %s", getattr(current_user, "id", None), exc)
+
+
 def _safe_float_attr(obj: Any, attr: str, default: float = 0.0, disallow_zero: bool = False) -> float:
     """Extrae de forma segura atributos numéricos de modelos ORM evitando que 0.0 legítimo se convierta en default."""
     val = getattr(obj, attr, None)
@@ -714,6 +730,7 @@ def generate_ai_apu_route(
             inverse_result["generation_engine"] = "inverse"
             if jev_analysis:
                 inverse_result["jev_analysis"] = jev_analysis
+            _increment_user_ai_apu_count(current_user, inverse_result)
             return _strip_debug_payload(inverse_result, is_superadmin)
         except Exception as exc:
             logger.error("Error al sintetizar APU en Modo Matemático: %s", exc, exc_info=True)
@@ -746,6 +763,7 @@ def generate_ai_apu_route(
             )
             if jev_analysis:
                 v2_result["jev_analysis"] = jev_analysis
+            _increment_user_ai_apu_count(current_user, v2_result)
             return _strip_debug_payload(v2_result, is_superadmin)
         except Exception as exc:
             logger.error("Error al generar APU con Motor v2.0: %s", exc, exc_info=True)
@@ -807,6 +825,7 @@ def generate_ai_apu_route(
             )
             if jev_analysis:
                 v3_result["jev_analysis"] = jev_analysis
+            _increment_user_ai_apu_count(current_user, v3_result)
             # En Motor v3.0 conservamos la auditoría completa (selección base, deltas y telemetría)
             # para alimentar el visor técnico y el exportador de Debug JSON
             return v3_result
@@ -1095,12 +1114,7 @@ def generate_ai_apu_route(
             "usuario_rol": "superadmin" if is_superadmin else "regular",
             "usuario_id": getattr(current_user, "id", None)
         }
-        if (result.get("status") in ("success", "completed")) and result.get("partida"):
-            with ArkoSessionLocal() as adb:
-                db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
-                if db_user:
-                    db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
-                    adb.commit()
+        _increment_user_ai_apu_count(current_user, result)
         result["generation_engine"] = "rag"
         if jev_analysis and isinstance(result, dict):
             result["jev_analysis"] = jev_analysis
@@ -1143,11 +1157,7 @@ def generate_ai_apu_route(
                 adv for adv in result["advertencias"]
                 if adv and isinstance(adv, str) and "[alcance]" not in adv.lower() and "alcance:" not in adv.lower()
             ]
-        with ArkoSessionLocal() as adb:
-            db_user = adb.query(current_user.__class__).filter_by(id=current_user.id).first()
-            if db_user:
-                db_user.ai_apus_generated = getattr(db_user, 'ai_apus_generated', 0) + 1
-                adb.commit()
+        _increment_user_ai_apu_count(current_user, result)
 
     if jev_analysis and isinstance(result, dict):
         result["jev_analysis"] = jev_analysis
