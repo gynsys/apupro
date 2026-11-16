@@ -18,6 +18,7 @@ import { DatabaseProvider } from './contexts/DatabaseContext.jsx';
 import { UserCostosProvider } from './context/UserCostosContext.jsx';
 
 const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
+const StudioReelPage = lazy(() => import('./pages/StudioReelPage.jsx'));
 const SharedBudgetPage = lazy(() => import('./pages/admin/SharedBudgetPage.jsx'));
 const SharedPartidaPage = lazy(() => import('./pages/admin/SharedPartidaPage.jsx'));
 const AdminDatabasePage = lazy(() => import('./modules/costbase/pages/AdminDatabasePage.jsx'));
@@ -79,7 +80,15 @@ function App() {
       <DatabaseProvider>
         <UserCostosProvider>
           <SiteConfigContext.Provider value={{ config, setConfig, fetchSiteConfig }}>
-            <BrowserRouter basename={window.location.pathname.startsWith('/app') ? '/app' : ''}>
+            <BrowserRouter
+              basename={
+                window.location.pathname.startsWith('/app')
+                  ? '/app'
+                  : window.location.pathname.startsWith('/admin-assets')
+                  ? '/admin-assets'
+                  : ''
+              }
+            >
               <Suspense
                 fallback={
                   <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -89,6 +98,7 @@ function App() {
               >
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/studio/instagram-ia-apu" element={<StudioReelPage />} />
                   {/* Redirección retrocompatible de rutas admin obsoletas */}
                   <Route path="/admin/*" element={<Navigate to="/budgets" replace />} />
 

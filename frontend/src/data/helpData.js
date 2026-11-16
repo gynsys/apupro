@@ -34,7 +34,7 @@ export const HELP_ARTICLES = [
       },
       {
         title: 'Paso 4: Añadir Partidas y APU',
-        desc: 'Puedes importar partidas desde la Base Maestra, crear partidas con la Inteligencia Artificial de CostBase o incorporar tus partidas personalizadas.',
+        desc: 'Puedes importar partidas desde la Base Maestra, crear partidas con la Inteligencia Artificial de Kosto o incorporar tus partidas personalizadas.',
       },
       {
         title: 'Paso 5: Configurar Factores Globales',
@@ -96,7 +96,7 @@ export const HELP_ARTICLES = [
       },
       {
         title: 'Importación a otra cuenta',
-        desc: 'Si el destinatario es usuario de CostBase, podrá importar el presupuesto completo a su propia cuenta con un solo clic.',
+        desc: 'Si el destinatario es usuario de Kosto, podrá importar el presupuesto completo a su propia cuenta con un solo clic.',
       }
     ],
     tips: [
@@ -116,7 +116,7 @@ export const HELP_ARTICLES = [
     tags: ['bases de datos', 'base maestra', 'base personalizada', 'inflacion', 'costbase', 'cost360', 'duplicar'],
     steps: [
       {
-        title: 'Base Maestra (CostBase)',
+        title: 'Base Maestra (Kosto)',
         desc: 'Base de datos oficial con miles de partidas de construcción estándar, rendimientos e insumos de referencia continuamente auditados.',
       },
       {
@@ -225,8 +225,8 @@ export const HELP_FAQS = [
   {
     id: 'faq-1',
     category: 'General',
-    q: '¿Qué es CostBase?',
-    a: 'CostBase es una plataforma SaaS profesional para la gestión de presupuestos de construcción, generación interactiva de Análisis de Precios Unitarios (APU) asistida por IA y actualización de bases de datos de costos en tiempo real.'
+    q: '¿Qué es Kosto?',
+    a: 'Kosto es una plataforma SaaS profesional para la gestión de presupuestos de construcción, generación interactiva de Análisis de Precios Unitarios (APU) asistida por IA y actualización de bases de datos de costos en tiempo real.'
   },
   {
     id: 'faq-2',
@@ -238,7 +238,7 @@ export const HELP_FAQS = [
     id: 'faq-3',
     category: 'Backup',
     q: '¿Qué es un archivo con extensión .cb?',
-    a: 'Es un respaldo criptográfico de CostBase que contiene todas las partidas, cuadrillas, equipos, materiales y cálculos de tu presupuesto. Solo tu cuenta puede restaurarlo para proteger tu información.'
+    a: 'Es un respaldo criptográfico de Kosto que contiene todas las partidas, cuadrillas, equipos, materiales y cálculos de tu presupuesto. Solo tu cuenta puede restaurarlo para proteger tu información.'
   },
   {
     id: 'faq-4',
@@ -254,13 +254,13 @@ export const HELP_FAQS = [
   },
   {
     id: 'faq-6',
-    category: 'CostBase',
+    category: 'Kosto',
     q: '¿Puedo editar los precios de la Base Maestra directamente?',
     a: 'La Base Maestra es de solo lectura para garantizar consistencia referencial. Si deseas personalizar precios, puedes duplicarla aplicando índices de inflación o guardar tus partidas en tu Base Personalizada.'
   },
   {
     id: 'faq-7',
-    category: 'CostBase',
+    category: 'Kosto',
     q: '¿Dónde encuentro las partidas que he creado con IA?',
     a: 'Todas las partidas que creas desde cero o generas con el Asistente IA se almacenan automáticamente en tu "Base Personalizada", accesible desde la sección "Visor Bases de Datos" o seleccionando la base personalizada en el menú.'
   },

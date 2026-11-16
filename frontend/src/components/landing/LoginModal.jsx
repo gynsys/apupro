@@ -203,7 +203,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
 
         <div>
           <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900" style={{ fontFamily: '"Barlow Condensed", sans-serif' }}>
-            CostBase
+            Kosto
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {view === 'login' && 'Ingresa tus credenciales para acceder al panel'}

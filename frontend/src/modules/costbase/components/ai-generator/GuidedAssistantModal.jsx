@@ -76,7 +76,7 @@ export default function GuidedAssistantModal({
             <Sparkles size={20} />
           </div>
           <div className="flex-1 min-w-[140px]">
-            <h3 className="font-bold text-amber-900">Asistente CostBase</h3>
+            <h3 className="font-bold text-amber-900">Asistente Kosto</h3>
             <p className="text-xs text-amber-800 truncate">Te guiaré paso a paso para crear tu APU.</p>
           </div>
           {isSuperAdmin && setGenerationMode && (

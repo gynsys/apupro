@@ -137,7 +137,7 @@ export default function SubscriptionRequestModal({ isOpen, onClose, limitType })
             </div>
             <h2 className="text-xl font-bold text-amber-950 mb-2">¡Excelente Elección!</h2>
             <p className="text-sm text-amber-900/80 mb-6 leading-relaxed">
-              Hemos registrado tu interés por el <strong>Plan {selectedPlan}</strong>. Un asesor de CostBase se pondrá en contacto contigo muy pronto para activarlo.
+              Hemos registrado tu interés por el <strong>Plan {selectedPlan}</strong>. Un asesor de Kosto se pondrá en contacto contigo muy pronto para activarlo.
             </p>
             <button
               type="button"

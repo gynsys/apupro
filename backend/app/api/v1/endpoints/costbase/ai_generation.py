@@ -47,6 +47,7 @@ from app.services.typesafe_service import evaluate_construction_prompt
 from app.services.ai_apu_service.domain_rules.well_classifier import is_sewage_or_drainage
 from app.services.ai_apu_service_v2 import generate_apu_v2
 from app.services.ai_apu_service_v3 import generate_apu_v3
+from app.services.llm_router import call_llm_text
 from app.api.v1.endpoints.costbase.common import (
     is_covenin_coded_item,
     normalize_text_alphanumeric,
@@ -178,6 +179,63 @@ def update_global_ai_engine_mode(
     except Exception as exc:
         logger.error("Error actualizando motor global de IA: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="No se pudo guardar el motor de generación global.")
+
+
+def _deterministic_compress_description(description: str, max_chars: int = 480) -> str:
+    """Comprime deterministamente una descripción técnica extensa preservando lo esencial."""
+    text = re.sub(r"\s+", " ", (description or "").strip())
+    if len(text) <= max_chars:
+        return text
+
+    # Eliminar aclaraciones largas entre paréntesis primero
+    compact = re.sub(r"\s*\([^)]{15,}\)", "", text)
+    compact = re.sub(r"\s+", " ", compact).strip()
+    if len(compact) <= max_chars:
+        return compact
+
+    # Conservar oraciones completas que quepan en el límite
+    sentences = [s.strip() for s in re.split(r"(?<=[.;])\s+", compact) if s.strip()]
+    selected: List[str] = []
+    for sentence in sentences:
+        candidate = " ".join(selected + [sentence])
+        if len(candidate) <= max_chars:
+            selected.append(sentence)
+        else:
+            break
+    if selected and len(" ".join(selected)) >= 80:
+        return " ".join(selected)
+
+    # Último recurso: cortar en límite de palabra sin partir términos
+    trimmed = compact[:max_chars].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return trimmed or compact[:max_chars]
+
+
+def _summarize_long_apu_description(description: str, max_chars: int = 480) -> str:
+    """Resume una descripción de partida >500 caracteres conservando datos técnicos clave."""
+    clean_text = re.sub(r"\s+", " ", (description or "").strip())
+    if len(clean_text) <= max_chars:
+        return clean_text
+
+    system_prompt = (
+        "Eres un ingeniero de costos experto en partidas de construcción (COVENIN/APU). "
+        f"Resume la descripción técnica proporcionada en MÁXIMO {max_chars} caracteres en español. "
+        "Debes conservar obligatoriamente: acción principal, materiales, equipos mencionados, "
+        "dimensiones/espesores, distancias de acarreo, condiciones de alcance (incluye/excluye) "
+        "y unidad si aparece. No inventes datos. Devuelve únicamente el texto resumido, sin comillas."
+    )
+    prompt = f"Resume en máximo {max_chars} caracteres:\n{clean_text}"
+
+    try:
+        summary = call_llm_text(prompt, use_case="cost360", system_prompt=system_prompt)
+        summary = re.sub(r"\s+", " ", (summary or "").strip().strip('"').strip("'"))
+        if summary and 20 <= len(summary) <= max_chars:
+            return summary
+        if summary and len(summary) > max_chars:
+            return _deterministic_compress_description(summary, max_chars=max_chars)
+    except Exception as exc:
+        logger.warning("Fallo resumen IA de descripción larga (%s); usando compresión determinista.", exc)
+
+    return _deterministic_compress_description(clean_text, max_chars=max_chars)
 
 
 def _safe_float_attr(obj: Any, attr: str, default: float = 0.0, disallow_zero: bool = False) -> float:
@@ -375,6 +433,19 @@ def generate_ai_apu_route(
 
     # --- CAPA 1: Validación de entrada (costo cero — sin LLM, sin red) ---
     capa1_result = validate_apu_input(raw_desc)
+    if capa1_result is not None and capa1_result[2] == "TOO_LONG" and len(raw_desc.split()) <= 800 and len(raw_desc) <= 6000:
+        summarized_desc = _summarize_long_apu_description(raw_desc, max_chars=480)
+        if summarized_desc and len(summarized_desc) <= 500:
+            logger.info(
+                "Descripción extensa (%d chars) resumida automáticamente a %d chars: %.120s",
+                len(raw_desc),
+                len(summarized_desc),
+                summarized_desc,
+            )
+            raw_desc = summarized_desc
+            payload.description = summarized_desc
+            capa1_result = validate_apu_input(raw_desc)
+
     if capa1_result is not None:
         veredicto, mensaje, codigo_interno = capa1_result
         logger.info("APU input rejected by Capa 1 [%s]: %.80s", codigo_interno, raw_desc)

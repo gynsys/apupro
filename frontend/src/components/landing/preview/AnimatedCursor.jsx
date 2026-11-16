@@ -1,11 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function AnimatedCursor({ position, visible, clicking }) {
+export default function AnimatedCursor({ position, visible, clicking, alwaysVisible = false }) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute z-[80] hidden transition-all duration-300 ease-out sm:block"
+      className={`pointer-events-none absolute z-[80] transition-all duration-300 ease-out ${
+        alwaysVisible ? 'block' : 'hidden sm:block'
+      }`}
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,

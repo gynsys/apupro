@@ -1,5 +1,4 @@
 import React from 'react';
-import { Layout } from 'lucide-react';
 
 export default function Footer() {
   return (
@@ -7,11 +6,9 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <div className="bg-blue-600 text-white p-1.5 rounded-xl">
-              <Layout size={20} />
-            </div>
+            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kosto Logo" className="w-8 h-8 object-contain rounded-lg bg-white p-0.5" />
             <span className="text-xl font-extrabold text-white">
-              CostBase
+              Kosto
             </span>
           </div>
           
@@ -23,7 +20,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-8 pt-8 border-t border-slate-800/50 text-center text-sm text-slate-500">
-          &copy; {new Date().getFullYear()} CostBase Platform. Creado por Ingeniería Arko 360. Todos los derechos reservados.
+          &copy; {new Date().getFullYear()} Kosto. Creado por Ingeniería Arko 360. Todos los derechos reservados.
         </div>
       </div>
     </footer>

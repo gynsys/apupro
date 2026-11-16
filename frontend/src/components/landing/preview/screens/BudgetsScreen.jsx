@@ -32,7 +32,7 @@ export default function BudgetsScreen({ activeBudget }) {
           <div className="rounded-xl bg-blue-600 p-1.5 text-white shadow-sm">
             <Layout size={18} />
           </div>
-          <span className="text-lg font-extrabold tracking-tight text-blue-700">CostBase</span>
+          <span className="text-lg font-extrabold tracking-tight text-blue-700">Kosto</span>
         </div>
         <div className="flex items-center gap-1 text-slate-400">
           <Bell size={18} />

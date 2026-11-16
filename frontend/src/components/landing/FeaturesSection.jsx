@@ -43,7 +43,7 @@ export default function FeaturesSection() {
             Herramientas para la <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Construcción Moderna</span>
           </h2>
           <p className="text-slate-400 text-lg">
-            Olvídate de las hojas de cálculo frágiles y el software desactualizado. CostBase ofrece una experiencia fluida, rápida y potente.
+            Olvídate de las hojas de cálculo frágiles y el software desactualizado. Kosto ofrece una experiencia fluida, rápida y potente.
           </p>
         </div>
 

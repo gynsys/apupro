@@ -1,6 +1,6 @@
 {
-  "name": "CostBase - Modo Obra",
-  "short_name": "CostBase",
+  "name": "Kosto - Modo Obra",
+  "short_name": "Kosto",
   "description": "Plataforma de Presupuestos, Cómputos Métricos y Análisis de Precios Unitarios (APU)",
   "start_url": "/budgets",
   "scope": "/",
