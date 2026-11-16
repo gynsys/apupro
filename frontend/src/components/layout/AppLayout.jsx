@@ -9,9 +9,10 @@ import { AuthContext } from '../../context/AuthContext';
 import SubscriptionRequestModal from '../SubscriptionRequestModal';
 import ReportPaymentModal from '../ReportPaymentModal';
 import BudgetFileImportModal from '../modals/BudgetFileImportModal';
+import BudgetFromComputosModal from '../modals/BudgetFromComputosModal';
 import AccountSettingsModal from '../modals/AccountSettingsModal';
 import BudgetImportChoiceModal from '../modals/BudgetImportChoiceModal';
-import { Crown, Receipt, HelpCircle } from 'lucide-react';
+import { Crown, Receipt, HelpCircle, ClipboardList } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import HelpDrawer from '../help/HelpDrawer';
 import { OfflineStatusBanner } from '../../modules/offline';
@@ -37,6 +38,7 @@ export default function AppLayout() {
   const [showHelpDrawer, setShowHelpDrawer] = useState(false);
   const [showImportChoiceModal, setShowImportChoiceModal] = useState(false);
   const [showBudgetImportModal, setShowBudgetImportModal] = useState(false);
+  const [showBudgetComputosModal, setShowBudgetComputosModal] = useState(false);
   const [budgetImportFile, setBudgetImportFile] = useState(null);
   const [budgetImportMode, setBudgetImportMode] = useState('budget');
 
@@ -160,6 +162,32 @@ export default function AppLayout() {
           {!isMobile && (
             <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
               Importar Presupuesto
+              <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
+            </div>
+          )}
+        </div>
+
+        {/* Botón Planilla de Cómputos */}
+        <div className="group relative w-full">
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(false);
+              setShowBudgetComputosModal(true);
+            }}
+            aria-label="Planilla de Cómputos"
+            className={`flex items-center ${
+              isMobile ? 'justify-start px-3.5 py-2.5 gap-3' : 'justify-center p-3'
+            } rounded-xl transition-all duration-200 text-slate-600 hover:bg-[#FEF3C7] hover:text-amber-900 w-full min-h-[44px] touch-target cursor-pointer`}
+          >
+            <ClipboardList size={22} className="text-amber-500 shrink-0" />
+            {isMobile && (
+              <span className="text-sm font-medium tracking-tight truncate">Planilla de Cómputos</span>
+            )}
+          </button>
+          {!isMobile && (
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-white text-slate-500 border border-slate-200 text-xs font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-[9999]">
+              Planilla de Cómputos
               <div className="absolute top-1/2 -translate-y-1/2 right-full border-4 border-transparent border-r-white"></div>
             </div>
           )}
@@ -514,6 +542,18 @@ export default function AppLayout() {
           navigate(`/budgets/${budgetId}`);
         }}
         onShowPlans={() => setShowSubscriptionModal(true)}
+      />
+
+      <BudgetFromComputosModal
+        isOpen={showBudgetComputosModal}
+        onClose={() => setShowBudgetComputosModal(false)}
+        onCreated={(result) => {
+          setShowBudgetComputosModal(false);
+          const targetId = result?.budget_id || result;
+          if (targetId) {
+            navigate(`/budgets/${targetId}`);
+          }
+        }}
       />
 
       <SubscriptionRequestModal 
