@@ -156,7 +156,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
 
   const triggerAutoGeneration = async (list) => {
     const toGenerate = (list || []).filter(
-      (item) => !item.is_chapter && !item.has_covenin_code_match && item.include && !item.generated_data && item.apu_source !== 'excel_apu' && !(item.materials?.length || item.equipments?.length || item.labors?.length)
+      (item) => !item.is_chapter && !item.selected && !item.has_covenin_code_match && item.include && !item.generated_data && item.apu_source !== 'excel_apu' && !(item.materials?.length || item.equipments?.length || item.labors?.length)
     );
     if (!toGenerate.length) return;
 
@@ -356,7 +356,7 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
           const generated = item.generated_data;
           const suppliedCode = (item.code || '').trim();
           const generatedCode = item.generated_code || generated?.partida?.cod_par || suppliedCode || '';
-          const useGenerated = Boolean(generated && (item.selected === generatedCode || !item.has_covenin_code_match));
+          const useGenerated = Boolean(generated && item.selected === generatedCode);
           const hasExcelApu = item.apu_source === 'excel_apu' || Boolean(item.materials?.length || item.equipments?.length || item.labors?.length);
 
           const finalPerformance = (useGenerated ? (Number(generated?.partida?.performance || generated?.partida?.rendimiento) || null) : null)

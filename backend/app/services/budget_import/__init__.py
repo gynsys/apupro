@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .apu_workbook import extract_from_apu_workbook, is_apu_workbook
 from .errors import BudgetImportError, FileExtractionError
 from .extractors import _looks_like_stop_row, _normalize_unit, extract_from_file
-from .matching import find_candidates
+from .matching import find_candidates, refine_with_llm
 from .structuring import MAX_ITEMS, structure_text
 
 logger = logging.getLogger(__name__)
@@ -110,19 +110,41 @@ def build_preview(data: bytes, filename: str, db: Session, mode: str = "budget")
             item["selected_cod_par"] = None
             continue
 
-        # Coincidencia estricta por código COVENIN en la base de datos
+        # 1. Coincidencia estricta por código COVENIN en la base de datos
         code_candidates = [c for c in item["candidates"] if c.get("match_type") == "code"]
         if code_candidates:
             item["has_covenin_code_match"] = True
             item["selected_cod_par"] = code_candidates[0]["cod_par"]
-        else:
-            # Si no coincide con un código COVENIN de la BD, NO preseleccionar candidata
-            # para que se genere el APU con IA conservando el código del archivo.
-            item["has_covenin_code_match"] = False
-            item["selected_cod_par"] = None
+            continue
 
-    covenin_matched = sum(1 for item in items if not item["is_chapter"] and item.get("has_covenin_code_match"))
-    pending_ai = sum(1 for item in items if not item["is_chapter"] and not item.get("has_covenin_code_match"))
+        # 2. Coincidencia exacta por descripción normalizada en la base de datos
+        exact_desc_candidates = [c for c in item["candidates"] if c.get("match_type") == "exact_description"]
+        if exact_desc_candidates:
+            item["has_covenin_code_match"] = False
+            item["selected_cod_par"] = exact_desc_candidates[0]["cod_par"]
+            continue
+
+        item["has_covenin_code_match"] = False
+        item["selected_cod_par"] = None
+
+    # 3. Cruce semántico por descripción con LLM para las partidas sin match directo de código o descripción exacta.
+    # Si alguna candidata corresponde plenamente al trabajo descrito, refine_with_llm asigna selected_cod_par;
+    # si ninguna corresponde, la deja sin asignar (None) para que se genere únicamente la que haga falta.
+    try:
+        refine_with_llm(items)
+    except Exception as exc:
+        logger.warning("No se pudo refinar coincidencias por descripción con LLM: %s", exc)
+
+    # Respaldo determinista si el LLM no evaluó la fila (ni la rechazó explícitamente)
+    for item in items:
+        if item.get("is_chapter") or item.get("selected_cod_par") or item.get("llm_rejected"):
+            continue
+        candidates = item.get("candidates") or []
+        if candidates and float(candidates[0].get("score") or 0.0) >= 0.85:
+            item["selected_cod_par"] = candidates[0]["cod_par"]
+
+    matched_total = sum(1 for item in items if not item["is_chapter"] and item.get("selected_cod_par"))
+    pending_ai = sum(1 for item in items if not item["is_chapter"] and not item.get("selected_cod_par"))
     chapters = sum(1 for item in items if item["is_chapter"])
 
     header["budget_name"] = (header.get("budget_name") or _fallback_name(filename)).strip()[:250]
@@ -140,8 +162,8 @@ def build_preview(data: bytes, filename: str, db: Session, mode: str = "budget")
         "items": items,
         "stats": {
             "total": len(items),
-            "matched": covenin_matched,
-            "selected": covenin_matched,
+            "matched": matched_total,
+            "selected": matched_total,
             "pending": pending_ai,
             "generic": 0,
             "chapters": chapters,
