@@ -243,8 +243,8 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
   };
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4 flex items-center justify-center">
-      <div className="bg-white w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-6xl rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4 lg:p-6 flex items-center justify-center">
+      <div className="bg-white w-full h-full sm:h-auto sm:max-h-[92vh] sm:max-w-[95vw] xl:max-w-[1440px] 2xl:max-w-[1600px] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         <header className="px-4 sm:px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <Activity className="text-blue-600" size={22} />
@@ -322,18 +322,18 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   <table className="w-full text-xs">
                     <thead className="bg-slate-100 text-slate-600">
                       <tr>
-                        <th className="p-2 text-left">Código</th>
-                        <th className="p-2 text-left">Partida</th>
-                        <th className="p-2 text-right">Original</th>
-                        <th className="p-2 text-right">Modificada</th>
-                        <th className="p-2 text-right">Ejecutada</th>
-                        <th className="p-2 text-right">% Físico</th>
-                        <th className="p-2 text-right" title="% de obra programada financiero (peso de la partida respecto al monto total vigente)">% Obra prog. fin.</th>
-                        <th className="p-2 text-right">HH pres.</th>
-                        <th className="p-2 text-right">HH ejec.</th>
-                        <th className="p-2 text-right">% HH</th>
-                        <th className="p-2 text-right">Peso HH</th>
-                        <th className="p-2 text-right">Registrar</th>
+                        <th className="px-3 py-2 text-left whitespace-nowrap">Código</th>
+                        <th className="px-3 py-2 text-left">Partida</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">Original</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">Modificada</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">Ejecutada</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">% Físico</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap" title="% de obra programada financiero (peso de la partida respecto al monto total vigente)">% Obra prog. fin.</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">HH pres.</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">HH ejec.</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">% HH</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">Peso HH</th>
+                        <th className="px-3 py-2 text-right whitespace-nowrap">Registrar</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -341,22 +341,22 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                         const state = progress[item.item_id] || {};
                         return (
                           <tr key={item.item_id} className="border-t border-slate-100">
-                            <td className="p-2 font-mono">{item.code}</td>
-                            <td className="p-2 max-w-[320px] truncate" title={item.description}>{item.description}</td>
-                            <td className="p-2 text-right">{item.original_quantity} {item.unit}</td>
-                            <td className="p-2 text-right">{item.current_quantity} {item.unit}</td>
-                            <td className="p-2 text-right">{item.executed_quantity} {item.unit}</td>
-                            <td className="p-2 text-right font-semibold">{pct(item.physical_percent)}</td>
-                            <td className="p-2 text-right font-semibold text-indigo-700">
+                            <td className="px-3 py-2 font-mono whitespace-nowrap">{item.code}</td>
+                            <td className="px-3 py-2 max-w-[360px] truncate" title={item.description}>{item.description}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">{item.original_quantity} {item.unit}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">{item.current_quantity} {item.unit}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">{item.executed_quantity} {item.unit}</td>
+                            <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{pct(item.physical_percent)}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-indigo-700 whitespace-nowrap">
                               {pct(
                                 item.financial_weight ??
                                   (data.modified_amount > 0 ? (item.current_amount / data.modified_amount) * 100 : 0)
                               )}
                             </td>
-                            <td className="p-2 text-right">{item.budget_hours}</td>
-                            <td className="p-2 text-right">{item.executed_hours}</td>
-                            <td className="p-2 text-right font-semibold">{pct(item.physical_percent_hh)}</td>
-                            <td className="p-2 text-right">{pct(item.hours_weight)}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">{item.budget_hours}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">{item.executed_hours}</td>
+                            <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{pct(item.physical_percent_hh)}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">{pct(item.hours_weight)}</td>
                             <td className="p-2">
                               <div className="flex items-center gap-1 justify-end">
                                 <input type="number" min="0" step="0.01" placeholder="Cant."
