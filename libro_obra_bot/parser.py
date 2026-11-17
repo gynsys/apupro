@@ -497,7 +497,7 @@ def parse_inspection_message(text: str) -> Dict[str, Any]:
 
         # 12. MOVIMIENTO DE MAQUINARIA Y EQUIPO / HERRAMIENTAS
         match_equipos = re.match(
-            r"^[\s\*\_\#\-\•\>]*(?:Movimientos?\s+de\s+(?:Maquinarias?(?:\s+y\s+Equipos?)?|Equipos?(?:\s+y\s+Maquinarias?)?|Herramientas(?:\s+y\s+Equipos?)?)|(?:Maquinarias?\s+y\s+Equipos?|Equipos?\s+y\s+Maquinarias?)|Equipos?(?:\s+y\s+Maquinarias?|\s+en\s+obra|\s+y\s+Herramientas)?|Maquinarias?|Herramientas\s+y\s+Equipos?|Herramientas(?=[\s\*\_\#]*[:=;\-]))[\s\*\_\#]*[:=;\-]?[\s\*\_\#]*(.*)$",
+            r"^[\s\*\_\#\-\•\>]*(?:Movimientos?\s+de\s+(?:(?:Maquinarias?|M[aá]quinas?)(?:\s+y\s+Equipos?)?|Equipos?(?:\s+y\s+(?:Maquinarias?|M[aá]quinas?))?|Herramientas(?:\s+y\s+Equipos?)?)|(?:(?:Maquinarias?|M[aá]quinas?)\s+y\s+Equipos?|Equipos?\s+y\s+(?:Maquinarias?|M[aá]quinas?))|Equipos?(?:\s+y\s+(?:Maquinarias?|M[aá]quinas?)|\s+en\s+obra|\s+y\s+Herramientas)?|(?:Maquinarias?|M[aá]quinas?)|Herramientas\s+y\s+Equipos?|Herramientas(?=[\s\*\_\#]*[:=;\-]))[\s\*\_\#]*[:=;\-]?[\s\*\_\#]*(.*)$",
             line,
             re.IGNORECASE,
         )
