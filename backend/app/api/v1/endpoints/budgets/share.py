@@ -1,13 +1,16 @@
 """
 Budget sharing endpoints: Public share links, read-only preview, and shared cloning.
 """
+import copy
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
 from app.core.config import settings
@@ -613,3 +616,236 @@ def import_shared_budget(
         db.rollback()
         logger.error(f"Error al importar presupuesto compartido token={share_token}: {err}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error interno al importar presupuesto compartido")
+
+
+# ---------------------------------------------------------------------------
+# Planillas de Cómputos Métricos: Compartir por enlace o directo a otro usuario
+# ---------------------------------------------------------------------------
+
+def _find_user_computos_draft(
+    arko_db: Session,
+    user_id: int,
+    draft_id: str,
+) -> Optional[Dict[str, Any]]:
+    user = arko_db.query(ArkoAdmin).filter(ArkoAdmin.id == int(user_id)).first()
+    if not user:
+        return None
+    config = user.site_config or {}
+    drafts = config.get("computos_drafts", [])
+    if not isinstance(drafts, list):
+        return None
+    clean_id = str(draft_id or "").strip()
+    return next((d for d in drafts if isinstance(d, dict) and str(d.get("id")) == clean_id), None)
+
+
+def _clone_computos_draft_for_user(
+    arko_db: Session,
+    recipient_id: int,
+    source_draft: Dict[str, Any],
+    sender_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    recipient = arko_db.query(ArkoAdmin).filter(
+        ArkoAdmin.id == int(recipient_id),
+        ArkoAdmin.is_active.is_(True),
+    ).first()
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Usuario destinatario no encontrado")
+
+    config = dict(recipient.site_config or {})
+    raw_drafts = config.get("computos_drafts", [])
+    drafts: List[Dict[str, Any]] = list(raw_drafts) if isinstance(raw_drafts, list) else []
+
+    cloned = copy.deepcopy(source_draft)
+    new_draft_id = f"draft-{uuid.uuid4().hex[:12]}"
+    base_name = (cloned.get("budgetName") or "Planilla de Cómputos").strip()
+    if not base_name.endswith("(Compartida)"):
+        cloned["budgetName"] = f"{base_name} (Compartida)"
+    cloned["id"] = new_draft_id
+    cloned["budgetId"] = ""
+    cloned["savedAt"] = datetime.now(timezone.utc).isoformat()
+    cloned["versions"] = []
+    if sender_name:
+        cloned["sharedBy"] = sender_name
+
+    drafts.insert(0, cloned)
+    config["computos_drafts"] = drafts[:40]
+    recipient.site_config = config
+    flag_modified(recipient, "site_config")
+    arko_db.commit()
+    return cloned
+
+
+def _resolve_frontend_base_url(request: Request) -> str:
+    origin = request.headers.get("origin")
+    if origin and ("costbase.net" in origin or "localhost" in origin):
+        return origin.rstrip("/")
+    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+    if "gynsys.net" in frontend_base_url:
+        return "https://www.costbase.net"
+    return frontend_base_url.rstrip("/")
+
+
+@router.post("/computos/drafts/{draft_id}/share")
+def generate_computos_share_link(
+    draft_id: str,
+    request: Request,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Genera un enlace firmado para compartir una planilla de cómputos."""
+    with ArkoSessionLocal() as arko_db:
+        draft = _find_user_computos_draft(arko_db, int(current_user.id), draft_id)
+        if not draft:
+            raise HTTPException(status_code=404, detail="Planilla de cómputos no encontrada. Guárdala primero para compartir.")
+
+    token = jwt.encode(
+        {
+            "scope": "computos_share",
+            "owner_id": int(current_user.id),
+            "draft_id": str(draft_id).strip(),
+            "exp": int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp()),
+        },
+        settings.SECRET_KEY,
+        algorithm="HS256",
+    )
+    frontend_base_url = _resolve_frontend_base_url(request)
+    return {
+        "share_token": token,
+        "share_url": f"{frontend_base_url}/computos/shared/{token}",
+        "draft_id": str(draft_id).strip(),
+        "budget_name": draft.get("budgetName") or "Planilla de Cómputos",
+        "expires_in_days": 30,
+    }
+
+
+@router.post("/computos/drafts/{draft_id}/share-to-user")
+def share_computos_with_user(
+    draft_id: str,
+    payload: Dict[str, Any],
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Clona una planilla de cómputos directamente en la cuenta de otro usuario de Kostos y le notifica."""
+    recipient_id = (payload or {}).get("recipient_id")
+    note = str((payload or {}).get("note") or "").strip()
+    if not recipient_id:
+        raise HTTPException(status_code=400, detail="Selecciona un usuario destinatario")
+    if str(recipient_id) == str(current_user.id):
+        raise HTTPException(status_code=400, detail="No puedes compartir una planilla contigo mismo")
+
+    sender_name = current_user.full_name or current_user.username or current_user.email
+    with ArkoSessionLocal() as arko_db:
+        source_draft = _find_user_computos_draft(arko_db, int(current_user.id), draft_id)
+        if not source_draft:
+            raise HTTPException(status_code=404, detail="Planilla de cómputos no encontrada. Guárdala primero para compartir.")
+
+        cloned = _clone_computos_draft_for_user(arko_db, int(recipient_id), source_draft, sender_name=sender_name)
+        planilla_name = source_draft.get("budgetName") or "Planilla de Cómputos"
+        token = jwt.encode(
+            {
+                "scope": "computos_share",
+                "owner_id": int(current_user.id),
+                "draft_id": str(draft_id).strip(),
+                "exp": int((datetime.now(timezone.utc) + timedelta(days=30)).timestamp()),
+            },
+            settings.SECRET_KEY,
+            algorithm="HS256",
+        )
+        arko_db.add(Notification(
+            user_id=int(recipient_id),
+            message=f"{sender_name} te compartió la planilla de cómputos: {planilla_name}" + (f" — {note}" if note else ""),
+            type="computos_shared",
+            link=f"/computos/shared/{token}",
+            is_read=False,
+        ))
+        arko_db.commit()
+
+    return {
+        "success": True,
+        "draft_id": cloned["id"],
+        "recipient_id": int(recipient_id),
+        "message": "Planilla agregada a los Cómputos Guardados del destinatario",
+    }
+
+
+@router.get("/computos/shared/{share_token}")
+def get_shared_computos_preview(
+    share_token: str,
+    current_user: Optional[ArkoAdmin] = Depends(get_optional_arko_admin),
+) -> Dict[str, Any]:
+    """Vista pública de solo lectura de una planilla de cómputos compartida."""
+    try:
+        payload = jwt.decode(share_token, settings.SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=404, detail="Enlace de planilla inválido o expirado")
+
+    if payload.get("scope") != "computos_share":
+        raise HTTPException(status_code=404, detail="Enlace de planilla inválido")
+
+    owner_id = payload.get("owner_id")
+    draft_id = payload.get("draft_id")
+    if not owner_id or not draft_id:
+        raise HTTPException(status_code=404, detail="Enlace de planilla incompleto")
+
+    with ArkoSessionLocal() as arko_db:
+        owner = arko_db.query(ArkoAdmin).filter(ArkoAdmin.id == int(owner_id)).first()
+        if not owner:
+            raise HTTPException(status_code=404, detail="Planilla no encontrada")
+        draft = _find_user_computos_draft(arko_db, int(owner_id), str(draft_id))
+        if not draft:
+            raise HTTPException(status_code=404, detail="La planilla compartida ya no está disponible")
+
+        owner_name = owner.full_name or owner.username or "Usuario de Kostos"
+        is_own = bool(current_user and str(current_user.id) == str(owner_id))
+        items = draft.get("items") if isinstance(draft.get("items"), list) else []
+
+        return {
+            "draft": {
+                "id": draft.get("id"),
+                "budgetName": draft.get("budgetName") or "Planilla de Cómputos",
+                "projectName": draft.get("projectName") or "",
+                "savedAt": draft.get("savedAt"),
+                "itemCount": len(items),
+                "items": items,
+            },
+            "owner_name": owner_name,
+            "is_own_draft": is_own,
+        }
+
+
+@router.post("/computos/shared/{share_token}/import")
+def import_shared_computos(
+    share_token: str,
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    """Clona una planilla de cómputos compartida hacia los Cómputos Guardados del usuario actual."""
+    try:
+        payload = jwt.decode(share_token, settings.SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=404, detail="Enlace de planilla inválido o expirado")
+
+    if payload.get("scope") != "computos_share":
+        raise HTTPException(status_code=404, detail="Enlace de planilla inválido")
+
+    owner_id = payload.get("owner_id")
+    draft_id = payload.get("draft_id")
+    if not owner_id or not draft_id:
+        raise HTTPException(status_code=404, detail="Enlace de planilla incompleto")
+
+    with ArkoSessionLocal() as arko_db:
+        owner = arko_db.query(ArkoAdmin).filter(ArkoAdmin.id == int(owner_id)).first()
+        source_draft = _find_user_computos_draft(arko_db, int(owner_id), str(draft_id))
+        if not source_draft:
+            raise HTTPException(status_code=404, detail="La planilla compartida ya no está disponible")
+
+        owner_name = (owner.full_name or owner.username) if owner else None
+        cloned = _clone_computos_draft_for_user(
+            arko_db,
+            int(current_user.id),
+            source_draft,
+            sender_name=owner_name,
+        )
+
+    return {
+        "success": True,
+        "draft": cloned,
+        "message": "Planilla importada a tus Cómputos Guardados",
+    }

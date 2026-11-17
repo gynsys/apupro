@@ -19,6 +19,7 @@ import {
   Edit3,
   Plus,
   Save,
+  Share2,
   Copy,
   Info,
   FolderOpen,
@@ -81,6 +82,7 @@ import {
 } from '../../modules/computos/services/computosApi.js';
 import { createRowsState, rowsReducer } from '../../modules/computos/state/rowsReducer.js';
 import SavedComputosModal from '../../modules/computos/components/SavedComputosModal.jsx';
+import ShareComputosModal from '../../modules/computos/components/ShareComputosModal.jsx';
 import { AddChapterModal, RenameChapterModal } from '../../modules/computos/components/ChapterModals.jsx';
 import ProjectInfoModal from '../../modules/computos/components/ProjectInfoModal.jsx';
 import GenerationProgressModal from '../../modules/computos/components/GenerationProgressModal.jsx';
@@ -603,8 +605,15 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       }, 3500);
 
       // 3. Sincronizar en la cuenta (nube) para que esté disponible en PC y móvil
+      let cloudDraftId = currentDraftId;
       try {
         const res = await saveComputosDraft(draftPayload);
+        if (res && res.id) {
+          cloudDraftId = res.id;
+          if (res.id !== currentDraftId) {
+            setCurrentDraftId(res.id);
+          }
+        }
         if (res && Array.isArray(res.drafts)) {
           setSavedList(res.drafts);
           try {
@@ -615,11 +624,25 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         }
       } catch (cloudErr) {
         console.warn('Aviso: Guardado local exitoso, pero falló sincronización en la nube:', cloudErr);
+        return null;
       }
+      return { ...draftPayload, id: cloudDraftId };
     } catch (err) {
       console.error('Error al guardar borrador de cómputos:', err);
       toast.error('No se pudo guardar el borrador en el almacenamiento local.');
+      return null;
     }
+  };
+
+  const [shareDraft, setShareDraft] = useState(null);
+
+  const handleShareCurrentDraft = async () => {
+    const saved = await handleSaveDraft();
+    if (!saved || !saved.id) {
+      toast.error('Inicia sesión y guarda la planilla en la nube para poder compartirla.');
+      return;
+    }
+    setShareDraft(saved);
   };
 
   /**
@@ -2198,6 +2221,13 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         onCreate={handleCreateNewComputo}
         onLoad={handleLoadSavedComputo}
         onDelete={handleDeleteSavedComputo}
+        onShare={(draftItem) => setShareDraft(draftItem)}
+      />
+
+      <ShareComputosModal
+        isOpen={Boolean(shareDraft)}
+        onClose={() => setShareDraft(null)}
+        draft={shareDraft}
       />
 
       <AddChapterModal
@@ -2656,6 +2686,16 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
 
             <button
               type="button"
+              onClick={handleShareCurrentDraft}
+              disabled={isCommitting}
+              className="p-2 rounded-xl bg-white hover:bg-sky-50 border border-sky-300 text-sky-700 flex items-center justify-center transition-all shadow-xs cursor-pointer shrink-0 touch-target"
+              title="Compartir planilla"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
               onClick={handleConfirmAndGenerateBudget}
               disabled={isCommitting || validCount === 0}
               className="flex-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/30 disabled:opacity-50 transition-all cursor-pointer touch-target min-w-0"
@@ -2711,6 +2751,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
                     <span>Guardar</span>
                   </>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShareCurrentDraft}
+                disabled={isCommitting}
+                className="px-3.5 py-2 rounded-xl bg-white hover:bg-sky-50 border border-sky-300 text-sky-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                title="Compartir planilla con otro usuario o mediante enlace"
+              >
+                <Share2 className="w-3.5 h-3.5 text-sky-600" />
+                <span>Compartir</span>
               </button>
 
               <button

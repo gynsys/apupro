@@ -21,6 +21,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage.jsx'));
 const StudioReelPage = lazy(() => import('./pages/StudioReelPage.jsx'));
 const SharedBudgetPage = lazy(() => import('./pages/admin/SharedBudgetPage.jsx'));
 const SharedPartidaPage = lazy(() => import('./pages/admin/SharedPartidaPage.jsx'));
+const SharedComputosPage = lazy(() => import('./pages/admin/SharedComputosPage.jsx'));
 const AdminDatabasePage = lazy(() => import('./modules/costbase/pages/AdminDatabasePage.jsx'));
 const MarketAdminPage = lazy(() => import('./modules/market/pages/MarketAdminPage.jsx'));
 
@@ -151,6 +152,7 @@ function App() {
                   {/* RUTA DE VISTA PREVIA COMPARTIDA (Accesible con y sin sesión) */}
                   <Route path="/budgets/shared/partida/:token" element={<SharedPartidaPage />} />
                   <Route path="/budgets/shared/:token" element={<SharedBudgetPage />} />
+                  <Route path="/computos/shared/:token" element={<SharedComputosPage />} />
 
                   {/* RUTAS DE PRESUPUESTOS (APP - Accesible en modo Free invitado) */}
                   <Route

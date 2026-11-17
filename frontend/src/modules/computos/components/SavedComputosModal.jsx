@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FolderOpen, History, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { FolderOpen, History, Plus, RotateCcw, Share2, Trash2, X } from 'lucide-react';
 
 export default function SavedComputosModal({
   isOpen,
@@ -8,6 +8,7 @@ export default function SavedComputosModal({
   onCreate,
   onLoad,
   onDelete,
+  onShare,
 }) {
   const [expandedDraftId, setExpandedDraftId] = useState(null);
 
@@ -105,6 +106,19 @@ export default function SavedComputosModal({
                         >
                           <History className="w-3.5 h-3.5 text-amber-700" />
                           <span>Versiones ({versions.length})</span>
+                        </button>
+                      )}
+                      {onShare && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onShare(item);
+                          }}
+                          className="p-1.5 text-sky-600 hover:text-sky-800 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                          title="Compartir planilla"
+                        >
+                          <Share2 className="w-4 h-4" />
                         </button>
                       )}
                       <button
