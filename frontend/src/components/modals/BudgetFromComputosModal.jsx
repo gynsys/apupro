@@ -83,6 +83,7 @@ import {
 import { createRowsState, rowsReducer } from '../../modules/computos/state/rowsReducer.js';
 import SavedComputosModal from '../../modules/computos/components/SavedComputosModal.jsx';
 import ShareComputosModal from '../../modules/computos/components/ShareComputosModal.jsx';
+import MergeComputosModal from '../../modules/computos/components/MergeComputosModal.jsx';
 import { AddChapterModal, RenameChapterModal } from '../../modules/computos/components/ChapterModals.jsx';
 import ProjectInfoModal from '../../modules/computos/components/ProjectInfoModal.jsx';
 import GenerationProgressModal from '../../modules/computos/components/GenerationProgressModal.jsx';
@@ -448,9 +449,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
           const existingList = getSavedComputosList();
           const updatedList = [
             draftPayload,
-            ...existingList.filter(
-              (item) => item.id !== currentDraftId && item.budgetName !== draftPayload.budgetName
-            ),
+            ...existingList.filter((item) => item.id !== currentDraftId),
           ];
           localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
           setSavedList(updatedList);
@@ -587,11 +586,11 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
       // 1. Guardar de inmediato en el borrador activo local
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftPayload));
 
-      // 2. Guardar o actualizar en la lista histórica local
+      // 2. Guardar o actualizar en la lista histórica local (identificando solo por ID para no sobreescribir homónimos)
       const existingList = getSavedComputosList();
       const updatedList = [
         draftPayload,
-        ...existingList.filter((item) => item.id !== currentDraftId && item.budgetName !== cleanName),
+        ...existingList.filter((item) => item.id !== currentDraftId),
       ];
       localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
       setSavedList(updatedList);
@@ -635,6 +634,33 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
   };
 
   const [shareDraft, setShareDraft] = useState(null);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+
+  const handleConfirmMerge = async ({ draft: mergedDraft, stats }) => {
+    try {
+      const existingList = getSavedComputosList();
+      const updatedList = [mergedDraft, ...existingList.filter((it) => it.id !== mergedDraft.id)];
+      localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
+      setSavedList(updatedList);
+      try {
+        const res = await saveComputosDraft(mergedDraft);
+        if (res && Array.isArray(res.drafts)) {
+          setSavedList(res.drafts);
+          localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(res.drafts));
+        }
+      } catch (_cloudErr) {
+        // Si está sin sesión o sin red, queda guardado localmente
+      }
+      setShowMergeModal(false);
+      setShowOpenModal(false);
+      handleLoadSavedComputo(mergedDraft);
+      toast.success(
+        `Planilla unificada (+${stats.chaptersAdded} cap., +${stats.itemsAdded} part. nuevas, ${stats.itemsMerged} combinadas)`
+      );
+    } catch (err) {
+      toast.error('No se pudo guardar la planilla unificada');
+    }
+  };
 
   const handleShareCurrentDraft = async () => {
     const saved = await handleSaveDraft();
@@ -1212,7 +1238,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         const existingList = getSavedComputosList();
         const updatedList = [
           draftPayload,
-          ...existingList.filter((item) => item.id !== currentDraftId && item.budgetName !== draftPayload.budgetName),
+          ...existingList.filter((item) => item.id !== currentDraftId),
         ];
         localStorage.setItem(SAVED_LIST_STORAGE_KEY, JSON.stringify(updatedList));
         setSavedList(updatedList);
@@ -2222,6 +2248,17 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         onLoad={handleLoadSavedComputo}
         onDelete={handleDeleteSavedComputo}
         onShare={(draftItem) => setShareDraft(draftItem)}
+        onOpenMerge={() => {
+          setShowOpenModal(false);
+          setShowMergeModal(true);
+        }}
+      />
+
+      <MergeComputosModal
+        isOpen={showMergeModal}
+        savedList={savedList}
+        onClose={() => setShowMergeModal(false)}
+        onConfirmMerge={handleConfirmMerge}
       />
 
       <ShareComputosModal

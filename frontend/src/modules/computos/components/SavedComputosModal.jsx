@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FolderOpen, History, Plus, RotateCcw, Share2, Trash2, X } from 'lucide-react';
+import { FolderOpen, GitMerge, History, Plus, RotateCcw, Share2, Trash2, X } from 'lucide-react';
 
 export default function SavedComputosModal({
   isOpen,
@@ -9,6 +9,7 @@ export default function SavedComputosModal({
   onLoad,
   onDelete,
   onShare,
+  onOpenMerge,
 }) {
   const [expandedDraftId, setExpandedDraftId] = useState(null);
 
@@ -36,18 +37,31 @@ export default function SavedComputosModal({
           </button>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold text-amber-900">
             {savedList.length} archivo(s) disponible(s)
           </span>
-          <button
-            type="button"
-            onClick={onCreate}
-            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Nuevo Cómputo</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenMerge && savedList.length >= 2 && (
+              <button
+                type="button"
+                onClick={onOpenMerge}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-amber-50 border border-amber-400 text-amber-900 text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                title="Combinar dos planillas trabajadas en paralelo"
+              >
+                <GitMerge className="w-3.5 h-3.5 text-amber-700" />
+                <span>Unificar</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onCreate}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Nuevo Cómputo</span>
+            </button>
+          </div>
         </div>
 
         <div className="max-h-72 overflow-y-auto space-y-2 pr-1">

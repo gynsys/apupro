@@ -987,12 +987,7 @@ def save_computos_draft(
 
         # Conservar hasta 5 versiones anteriores (puntos de restauración) cuando el contenido cambia
         existing_match = next(
-            (
-                d for d in drafts
-                if str(d.get("id")) == draft_id
-                or (clean_name and (d.get("budgetName") or "").strip() == clean_name)
-                or (incoming_budget_id and str(d.get("budgetId") or "").strip() == incoming_budget_id)
-            ),
+            (d for d in drafts if str(d.get("id")) == draft_id),
             None,
         )
         if existing_match and isinstance(existing_match.get("items"), list) and len(existing_match["items"]) > 0:
@@ -1018,12 +1013,8 @@ def save_computos_draft(
                     prev_versions.insert(0, snapshot)
             item["versions"] = prev_versions[:5]
 
-        drafts = [
-            d for d in drafts
-            if str(d.get("id")) != draft_id
-            and (not clean_name or (d.get("budgetName") or "").strip() != clean_name)
-            and (not incoming_budget_id or str(d.get("budgetId") or "").strip() != incoming_budget_id)
-        ]
+        # Identificar borradores exclusivamente por ID para no sobreescribir otras planillas con el mismo nombre
+        drafts = [d for d in drafts if str(d.get("id")) != draft_id]
         drafts.insert(0, item)
 
     try:

@@ -658,8 +658,14 @@ def _clone_computos_draft_for_user(
     cloned = copy.deepcopy(source_draft)
     new_draft_id = f"draft-{uuid.uuid4().hex[:12]}"
     base_name = (cloned.get("budgetName") or "Planilla de Cómputos").strip()
-    if not base_name.endswith("(Compartida)"):
-        cloned["budgetName"] = f"{base_name} (Compartida)"
+    candidate_name = base_name if base_name.endswith("(Compartida)") else f"{base_name} (Compartida)"
+    existing_names = {(d.get("budgetName") or "").strip().lower() for d in drafts if isinstance(d, dict)}
+    if candidate_name.lower() in existing_names:
+        suffix = 2
+        while f"{candidate_name} ({suffix})".lower() in existing_names:
+            suffix += 1
+        candidate_name = f"{candidate_name} ({suffix})"
+    cloned["budgetName"] = candidate_name
     cloned["id"] = new_draft_id
     cloned["budgetId"] = ""
     cloned["savedAt"] = datetime.now(timezone.utc).isoformat()
