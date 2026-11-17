@@ -294,9 +294,20 @@ export default function BudgetAPUEditorPage() {
       if (!budget || !item) {
         setLoading(true);
       }
-      const budgetData = id === 'example-demo'
-        ? await budgetService.getExampleDemo()
-        : await budgetService.getById(id);
+      let budgetData = null;
+      if (id === 'example-demo') {
+        try {
+          const cachedDemo = sessionStorage.getItem('kosto_guest_example_demo');
+          if (cachedDemo) budgetData = JSON.parse(cachedDemo);
+        } catch {
+          // ignore storage errors
+        }
+        if (!budgetData) {
+          budgetData = await budgetService.getExampleDemo();
+        }
+      } else {
+        budgetData = await budgetService.getById(id);
+      }
       setBudget(budgetData);
       const foundItem = budgetData.items?.find(i => i.id === itemId);
       if (!foundItem) {

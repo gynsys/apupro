@@ -88,12 +88,27 @@ export function useBudgetWorksheet() {
   const [editingChapterId, setEditingChapterId] = useState(null);
   const [editingChapterName, setEditingChapterName] = useState("");
 
+  const isGuestDemo = id === 'example-demo' || !isAuthenticated;
+
   const loadBudget = async () => {
     try {
       setLoading(true);
-      const data = id === 'example-demo'
-        ? await budgetService.getExampleDemo()
-        : await budgetService.getById(id);
+      let data = null;
+      if (isGuestDemo) {
+        try {
+          const cachedDemo = sessionStorage.getItem('kosto_guest_example_demo');
+          if (cachedDemo) {
+            data = JSON.parse(cachedDemo);
+          }
+        } catch {
+          // ignore storage errors
+        }
+        if (!data) {
+          data = await budgetService.getExampleDemo();
+        }
+      } else {
+        data = await budgetService.getById(id);
+      }
 
       // Sincronizar estado pendiente (DB + LocalStorage para máxima persistencia)
       try {
@@ -172,8 +187,19 @@ export function useBudgetWorksheet() {
       }, 500);
     }
 
-    budgetService.getAll().then(data => setAvailableBudgets(data)).catch(console.error);
-  }, [id, location.search]);
+    if (!isGuestDemo) {
+      budgetService.getAll().then(data => setAvailableBudgets(data)).catch(console.error);
+    }
+  }, [id, location.search, isGuestDemo]);
+
+  useEffect(() => {
+    if (!isGuestDemo || !budget) return;
+    try {
+      sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify(budget));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [isGuestDemo, budget]);
 
   // Handle APU printing
   useEffect(() => {
@@ -417,7 +443,7 @@ export function useBudgetWorksheet() {
         if (selected) targetOrder = selected.order + 1;
       }
       
-      await budgetService.addItem(id, {
+      const chapterPayload = {
         cod_par: "CAP",
         cov_par: "",
         description: chapterName.trim().toUpperCase(),
@@ -426,7 +452,25 @@ export function useBudgetWorksheet() {
         performance: 1.0,
         order: targetOrder,
         is_chapter: true
-      });
+      };
+
+      if (isGuestDemo) {
+        const localCap = {
+          ...chapterPayload,
+          id: `demo-cap-${Date.now()}`,
+          budget_id: id,
+          materials: [],
+          equipments: [],
+          labors: [],
+        };
+        setBudget(prev => prev ? { ...prev, items: [...(prev.items || []), localCap] } : prev);
+        setShowChapterModal(false);
+        setChapterName("");
+        toast.success('Capítulo agregado');
+        return;
+      }
+
+      await budgetService.addItem(id, chapterPayload);
       setShowChapterModal(false);
       setChapterName("");
       loadBudget();
@@ -444,6 +488,18 @@ export function useBudgetWorksheet() {
     if (!itemToDelete || isDeleting) return;
     setIsDeleting(true);
     try {
+      if (isGuestDemo) {
+        if (selectedItemId === itemToDelete.id) {
+          setSelectedItemId(null);
+        }
+        setBudget(prev => ({
+          ...prev,
+          items: (prev.items || []).filter(i => i.id !== itemToDelete.id)
+        }));
+        setItemToDelete(null);
+        toast.success('Eliminada correctamente');
+        return;
+      }
       await budgetService.deleteItem(id, itemToDelete.id);
       if (selectedItemId === itemToDelete.id) {
         setSelectedItemId(null);
@@ -470,7 +526,9 @@ export function useBudgetWorksheet() {
     }
     const finalName = editingChapterName.trim().toUpperCase();
     try {
-      await budgetService.updateItem(id, itemId, { description: finalName });
+      if (!isGuestDemo) {
+        await budgetService.updateItem(id, itemId, { description: finalName });
+      }
       setBudget(prev => ({
         ...prev,
         items: prev.items.map(i => i.id === itemId ? { ...i, description: finalName } : i)
@@ -495,7 +553,8 @@ export function useBudgetWorksheet() {
     newItems.splice(destinationIndex, 0, reorderedItem);
     
     setBudget(prev => ({ ...prev, items: newItems }));
-    
+    if (isGuestDemo) return;
+
     try {
       const itemIds = newItems.map(i => i.id);
       await budgetService.reorderItems(id, itemIds);
@@ -515,6 +574,7 @@ export function useBudgetWorksheet() {
     newItems.splice(targetIndex, 0, moved);
 
     setBudget(prev => ({ ...prev, items: newItems }));
+    if (isGuestDemo) return;
 
     try {
       const itemIds = newItems.map(i => i.id);
@@ -540,6 +600,13 @@ export function useBudgetWorksheet() {
   const saveQuantity = async (itemId, newQuantity) => {
     try {
       const parsedQty = typeof newQuantity === 'number' ? newQuantity : parseFloat(String(newQuantity).replace(',', '.')) || 0;
+      if (isGuestDemo) {
+        setBudget(prev => prev ? {
+          ...prev,
+          items: (prev.items || []).map(i => i.id === itemId ? { ...i, quantity: parsedQty } : i)
+        } : prev);
+        return;
+      }
       await budgetService.updateItem(budget.id, itemId, { quantity: parsedQty });
     } catch (error) {
       console.error(error);
@@ -580,6 +647,8 @@ export function useBudgetWorksheet() {
       console.warn('Error guardando partida pendiente en localStorage', e);
     }
 
+    if (isGuestDemo) return;
+
     // 3. Persistir en base de datos via backend
     try {
       await budgetService.updateItem(id, itemId, { is_pending: nextPending });
@@ -592,6 +661,10 @@ export function useBudgetWorksheet() {
   const handleSaveNotes = async () => {
     if (!budget) return;
     if ((budget.notes || '') === (notesText || '')) return;
+    if (isGuestDemo) {
+      setBudget(prev => ({ ...prev, notes: notesText }));
+      return;
+    }
     try {
       await budgetService.update(budget.id, { notes: notesText });
       setBudget(prev => ({ ...prev, notes: notesText }));
