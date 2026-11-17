@@ -65,6 +65,10 @@ export const controlObraService = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
+  autoPlan: (budgetId, payload) => request(`/budgets/${budgetId}/control-obra/auto-plan`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
   downloadReport: async (budgetId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/control-obra/report.xlsx`, {
       headers: token() ? { Authorization: `Bearer ${token()}` } : {},

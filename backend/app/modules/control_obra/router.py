@@ -15,6 +15,7 @@ from app.modules.control_obra.domain import ControlObraError
 from app.modules.control_obra.service import (
     approve_addendum,
     approve_modification,
+    auto_plan,
     build_report,
     close_period,
     create_addendum,
@@ -98,6 +99,11 @@ class PlanCreate(BaseModel):
     item_id: str
     planned_start: date
     planned_end: date
+
+
+class AutoPlanCreate(BaseModel):
+    start_date: date
+    mode: str = "chapters"
 
 
 def _budget_or_404(db: Session, budget_id: str, current_user: ArkoAdmin):
@@ -318,6 +324,18 @@ def post_plan(
     except ControlObraError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"id": row.id, "planned_start": row.planned_start.isoformat(), "planned_end": row.planned_end.isoformat()}
+
+
+@router.post("/auto-plan")
+def post_auto_plan(
+    budget_id: str,
+    payload: AutoPlanCreate,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+):
+    budget = _budget_or_404(db, budget_id, current_user)
+    items = auto_plan(db, budget, payload.start_date, payload.mode)
+    return {"planned_count": len(items), "items": items}
 
 
 @router.get("/curve")

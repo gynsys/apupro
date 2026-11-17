@@ -1,6 +1,7 @@
 """Servicio de integración entre la base de datos y el dominio de control de obra."""
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -166,12 +167,43 @@ def _number(value: Decimal) -> float:
     return float(round(value, 2))
 
 
+def _item_chapter_and_perf(budget: Budget) -> tuple[Dict[str, str], Dict[str, float], List[BudgetItem]]:
+    ordered = sorted(budget.items or [], key=lambda x: (getattr(x, "order", 0) or 0, str(x.id)))
+    chapters: Dict[str, str] = {}
+    perfs: Dict[str, float] = {}
+    current_chapter = "General"
+    for it in ordered:
+        if it.is_chapter:
+            current_chapter = (it.description or it.cod_par or "Capítulo").strip()
+        else:
+            chapters[str(it.id)] = current_chapter
+            perfs[str(it.id)] = float(it.performance or 0.0)
+    return chapters, perfs, ordered
+
+
+def _estimate_item_days(row: Dict[str, Any], performance: float) -> int:
+    qty = float(row.get("current_quantity") or 0.0)
+    budget_hours = float(row.get("budget_hours") or 0.0)
+    if performance and performance > 0 and qty > 0:
+        return max(1, int(math.ceil(qty / performance)))
+    if budget_hours > 0:
+        return max(1, int(math.ceil(budget_hours / 8.0)))
+    return 1
+
+
 def summary(db: Session, budget: Budget) -> Dict[str, Any]:
     domain = load_domain(db, budget)
     data = domain.summary()
+    chapters_map, perf_map, _ = _item_chapter_and_perf(budget)
+    plans_map = {
+        str(p.budget_item_id): p
+        for p in db.query(ControlObraPlan).filter(ControlObraPlan.budget_id == budget.id).all()
+    }
     items = []
     for row in data["items"]:
-        items.append({
+        item_id = str(row["item_id"])
+        plan = plans_map.get(item_id)
+        item_dict = {
             **row,
             "original_quantity": _number(row["original_quantity"]),
             "current_quantity": _number(row["current_quantity"]),
@@ -187,7 +219,12 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
             "executed_hours": _number(row["executed_hours"]),
             "hours_weight": _number(row["hours_weight"]),
             "physical_percent_hh": _number(row["physical_percent_hh"]),
-        })
+            "chapter_name": chapters_map.get(item_id, "General"),
+            "planned_start": plan.planned_start.isoformat() if plan else None,
+            "planned_end": plan.planned_end.isoformat() if plan else None,
+        }
+        item_dict["estimated_days"] = _estimate_item_days(item_dict, perf_map.get(item_id, 0.0))
+        items.append(item_dict)
     entries = (
         db.query(ControlObraProgressEntry)
         .filter(ControlObraProgressEntry.budget_id == budget.id)
@@ -464,7 +501,88 @@ def set_plan(db: Session, budget: Budget, item_id: str, planned_start: date, pla
     return row
 
 
+def auto_plan(db: Session, budget: Budget, start_date: date, mode: str = "chapters") -> List[Dict[str, Any]]:
+    """Auto-programa fechas de planificación usando duración teórica (cantidad/rendimiento o HH) agrupada por capítulos."""
+    summary_data = summary(db, budget)
+    by_id = {str(r["item_id"]): r for r in summary_data["items"]}
+    _, perf_map, ordered = _item_chapter_and_perf(budget)
+
+    # Agrupar partidas en orden respetando capítulos
+    groups: List[List[str]] = []
+    current_group: List[str] = []
+    for it in ordered:
+        if it.is_chapter:
+            if current_group:
+                groups.append(current_group)
+                current_group = []
+        elif str(it.id) in by_id:
+            current_group.append(str(it.id))
+    if current_group:
+        groups.append(current_group)
+
+    # Incluir cualquier partida nueva agregada por modificación que no estuviera en budget.items
+    seen_ids = {iid for g in groups for iid in g}
+    extra_ids = [iid for iid in by_id if iid not in seen_ids]
+    if extra_ids:
+        groups.append(extra_ids)
+
+    existing_plans = {
+        str(p.budget_item_id): p
+        for p in db.query(ControlObraPlan).filter(ControlObraPlan.budget_id == budget.id).all()
+    }
+
+    saved: List[Dict[str, Any]] = []
+    cursor = start_date
+    for group in groups:
+        if not group:
+            continue
+        group_max_end = cursor
+        for item_id in group:
+            row = by_id[item_id]
+            days = _estimate_item_days(row, perf_map.get(item_id, 0.0))
+            p_start = cursor
+            p_end = p_start + timedelta(days=days)
+            plan_row = existing_plans.get(item_id)
+            if plan_row:
+                plan_row.planned_start = p_start
+                plan_row.planned_end = p_end
+            else:
+                plan_row = ControlObraPlan(
+                    budget_id=budget.id,
+                    budget_item_id=item_id,
+                    planned_start=p_start,
+                    planned_end=p_end,
+                )
+                db.add(plan_row)
+            saved.append({
+                "item_id": item_id,
+                "planned_start": p_start.isoformat(),
+                "planned_end": p_end.isoformat(),
+                "days": days,
+            })
+            if mode == "sequential":
+                cursor = p_end
+            else:
+                if p_end > group_max_end:
+                    group_max_end = p_end
+        if mode != "sequential":
+            cursor = group_max_end
+
+    db.commit()
+    return saved
+
+
 def _month_starts(start: date, end: date) -> List[date]:
+    if (end - start).days <= 90:
+        points = []
+        current = start
+        while current <= end:
+            points.append(current)
+            current = current + timedelta(days=7)
+        if points and points[-1] < end:
+            points.append(end)
+        return points
+
     points = []
     current = date(start.year, start.month, 1)
     while current <= end:

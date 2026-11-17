@@ -30,6 +30,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
     kind: 'increase', item_id: '', quantity_delta: '', unit_price: '', code: '', description: '',
   });
   const [addendumForm, setAddendumForm] = useState({ amount: '', code: '', description: '' });
+  const [planStart, setPlanStart] = useState(today());
+  const [planMode, setPlanMode] = useState('chapters');
+  const [planDrafts, setPlanDrafts] = useState({});
+  const [planningBusy, setPlanningBusy] = useState(false);
 
   const items = data?.items || [];
   const currency = data?.currency || 'USD';
@@ -239,6 +243,48 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
       await load();
     } catch (error) {
       toast.error(error.message);
+    }
+  };
+
+  const runAutoPlan = async () => {
+    if (!planStart) {
+      toast.error('Selecciona una fecha de inicio.');
+      return;
+    }
+    setPlanningBusy(true);
+    try {
+      const res = await controlObraService.autoPlan(budgetId, {
+        start_date: planStart,
+        mode: planMode,
+      });
+      toast.success(`Planificación generada para ${res.planned_count} partidas.`);
+      setPlanDrafts({});
+      await load();
+    } catch (error) {
+      toast.error(error.message || 'No se pudo auto-programar.');
+    } finally {
+      setPlanningBusy(false);
+    }
+  };
+
+  const saveItemPlan = async (item) => {
+    const draft = planDrafts[item.item_id] || {};
+    const planned_start = draft.planned_start ?? item.planned_start;
+    const planned_end = draft.planned_end ?? item.planned_end;
+    if (!planned_start || !planned_end) {
+      toast.error('Indica fecha de inicio y fin.');
+      return;
+    }
+    try {
+      await controlObraService.planItem(budgetId, {
+        item_id: item.item_id,
+        planned_start,
+        planned_end,
+      });
+      toast.success('Fechas guardadas.');
+      await load();
+    } catch (error) {
+      toast.error(error.message || 'No se pudieron guardar las fechas.');
     }
   };
 
@@ -548,25 +594,196 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
               )}
 
               {tab === 'curva' && (
-                <div className="bg-white rounded-xl border border-slate-200 p-4">
-                  <h3 className="text-sm font-bold text-slate-700 mb-3">Curva S · planificado vs real</h3>
-                  {curveData.length === 0 ? <p className="text-sm text-slate-500">Configura fechas de planificación para generar la curva.</p> :
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead className="bg-slate-100 text-slate-600">
-                          <tr><th className="p-2 text-left">Fecha</th><th className="p-2 text-right">Planificado</th><th className="p-2 text-right">Real</th></tr>
-                        </thead>
-                        <tbody>
-                          {curveData.map((point) => (
-                            <tr key={point.date} className="border-t border-slate-100">
-                              <td className="p-2">{point.date}</td>
-                              <td className="p-2 text-right">{pct(point.planned_percent)}</td>
-                              <td className="p-2 text-right font-semibold">{pct(point.actual_percent)}</td>
+                <div className="space-y-4">
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800">Auto-programación desde HH / Rendimiento</h3>
+                        <p className="text-xs text-slate-500">
+                          Calcula automáticamente la duración de cada partida (cantidad / rendimiento o HH teóricas) y programa la obra por capítulos.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Inicio de obra</label>
+                          <input
+                            type="date"
+                            value={planStart}
+                            onChange={(e) => setPlanStart(e.target.value)}
+                            className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">Secuencia</label>
+                          <select
+                            value={planMode}
+                            onChange={(e) => setPlanMode(e.target.value)}
+                            className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-white"
+                          >
+                            <option value="chapters">Por capítulos (partidas en paralelo)</option>
+                            <option value="sequential">Secuencial partida a partida</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={runAutoPlan}
+                          disabled={planningBusy || items.length === 0}
+                          className="rounded-lg bg-blue-600 text-white text-xs font-semibold px-3.5 py-2 hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {planningBusy ? 'Programando...' : 'Auto-programar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-slate-700">Curva S · planificado vs real</h3>
+                      {curveData.length > 0 && (
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="flex items-center gap-1.5 text-blue-700 font-medium">
+                            <span className="w-4 h-0.5 bg-blue-600 inline-block" /> Planificado
+                          </span>
+                          <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                            <span className="w-4 h-0.5 bg-emerald-600 inline-block" /> Real
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {curveData.length === 0 ? (
+                      <p className="text-sm text-slate-500">
+                        Usa <strong>Auto-programar</strong> arriba o configura fechas de planificación abajo para generar la curva.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {curveData.length >= 2 && (
+                          <div className="w-full overflow-x-auto">
+                            <svg viewBox="0 0 720 220" className="w-full max-w-3xl h-52 mx-auto">
+                              {[0, 25, 50, 75, 100].map((v) => {
+                                const y = 190 - (v / 100) * 165;
+                                return (
+                                  <g key={v}>
+                                    <line x1="48" y1={y} x2="695" y2={y} stroke="#e2e8f0" strokeWidth="1" />
+                                    <text x="40" y={y + 4} textAnchor="end" fontSize="10" fill="#64748b">{v}%</text>
+                                  </g>
+                                );
+                              })}
+                              {(() => {
+                                const n = curveData.length;
+                                const xAt = (i) => 48 + (i / Math.max(1, n - 1)) * (695 - 48);
+                                const yAt = (val) => 190 - (Math.min(100, Math.max(0, Number(val || 0))) / 100) * 165;
+                                const plannedPts = curveData.map((p, i) => `${xAt(i)},${yAt(p.planned_percent)}`).join(' ');
+                                const actualPts = curveData.map((p, i) => `${xAt(i)},${yAt(p.actual_percent)}`).join(' ');
+                                return (
+                                  <>
+                                    <polyline fill="none" stroke="#2563eb" strokeWidth="2.5" strokeDasharray="5,4" points={plannedPts} />
+                                    <polyline fill="none" stroke="#059669" strokeWidth="2.5" points={actualPts} />
+                                    {curveData.map((p, i) => (
+                                      <g key={p.date}>
+                                        <circle cx={xAt(i)} cy={yAt(p.planned_percent)} r="3" fill="#2563eb" />
+                                        <circle cx={xAt(i)} cy={yAt(p.actual_percent)} r="3" fill="#059669" />
+                                        {(i === 0 || i === n - 1 || i % Math.ceil(n / 6) === 0) && (
+                                          <text x={xAt(i)} y="208" textAnchor="middle" fontSize="9" fill="#64748b">
+                                            {p.date.slice(5)}
+                                          </text>
+                                        )}
+                                      </g>
+                                    ))}
+                                  </>
+                                );
+                              })()}
+                            </svg>
+                          </div>
+                        )}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-slate-100 text-slate-600">
+                              <tr><th className="p-2 text-left">Fecha</th><th className="p-2 text-right">Planificado</th><th className="p-2 text-right">Real</th></tr>
+                            </thead>
+                            <tbody>
+                              {curveData.map((point) => (
+                                <tr key={point.date} className="border-t border-slate-100">
+                                  <td className="p-2">{point.date}</td>
+                                  <td className="p-2 text-right">{pct(point.planned_percent)}</td>
+                                  <td className="p-2 text-right font-semibold">{pct(point.actual_percent)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 overflow-x-auto">
+                    <h3 className="text-sm font-bold text-slate-700 mb-3">Cronograma por capítulos y partidas</h3>
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-100 text-slate-600">
+                        <tr>
+                          <th className="p-2 text-left">Capítulo</th>
+                          <th className="p-2 text-left">Partida</th>
+                          <th className="p-2 text-right whitespace-nowrap">Duración teór.</th>
+                          <th className="p-2 text-left">Inicio plan.</th>
+                          <th className="p-2 text-left">Fin plan.</th>
+                          <th className="p-2 text-right">Guardar</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((item) => {
+                          const draft = planDrafts[item.item_id] || {};
+                          const startVal = draft.planned_start ?? item.planned_start ?? '';
+                          const endVal = draft.planned_end ?? item.planned_end ?? '';
+                          return (
+                            <tr key={item.item_id} className="border-t border-slate-100">
+                              <td className="p-2 text-slate-500 max-w-[180px] truncate" title={item.chapter_name}>
+                                {item.chapter_name || 'General'}
+                              </td>
+                              <td className="p-2 max-w-[280px] truncate" title={item.description}>
+                                <span className="font-mono text-slate-500 mr-1.5">{item.code}</span>
+                                {item.description}
+                              </td>
+                              <td className="p-2 text-right whitespace-nowrap font-medium text-slate-700">
+                                {item.estimated_days || 1} d
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  type="date"
+                                  value={startVal}
+                                  onChange={(e) =>
+                                    setPlanDrafts((prev) => ({
+                                      ...prev,
+                                      [item.item_id]: { ...prev[item.item_id], planned_start: e.target.value },
+                                    }))
+                                  }
+                                  className="border border-slate-300 rounded px-1.5 py-1 text-xs"
+                                />
+                              </td>
+                              <td className="p-2">
+                                <input
+                                  type="date"
+                                  value={endVal}
+                                  onChange={(e) =>
+                                    setPlanDrafts((prev) => ({
+                                      ...prev,
+                                      [item.item_id]: { ...prev[item.item_id], planned_end: e.target.value },
+                                    }))
+                                  }
+                                  className="border border-slate-300 rounded px-1.5 py-1 text-xs"
+                                />
+                              </td>
+                              <td className="p-2 text-right">
+                                <button
+                                  onClick={() => saveItemPlan(item)}
+                                  className="px-2.5 py-1 rounded bg-slate-800 text-white hover:bg-slate-700 text-[11px] font-semibold"
+                                >
+                                  Guardar
+                                </button>
+                              </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>}
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
