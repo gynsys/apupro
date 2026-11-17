@@ -99,7 +99,11 @@ export default function BudgetHomePage() {
 
   const requireRegistration = useCallback((actionLabel = 'realizar esta acción') => {
     if (isAuthenticated) return true;
-    toast(`Regístrate gratis para ${actionLabel}`, { icon: '✨' });
+    toast(`Para guardar y ${actionLabel}, debes registrarte gratis`, {
+      icon: 'ℹ️',
+      position: 'top-center',
+      duration: 5000,
+    });
     openAuthModal?.('register');
     return false;
   }, [isAuthenticated, openAuthModal]);

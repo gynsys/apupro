@@ -39,7 +39,8 @@ export default function AccountSettingsModal({
     }
   })();
 
-  const aiMax = Number(user?.max_ai_apus || 0);
+  const isFreeAiTrial = user?.plan === 'free' && !user?.has_ai_access;
+  const aiMax = Number(user?.max_ai_apus || (isFreeAiTrial ? 3 : 0));
   const aiUsed = Number(user?.ai_apus_generated || 0);
   const aiPercent = aiMax > 0 ? Math.min(100, Math.round((aiUsed / aiMax) * 100)) : 0;
 

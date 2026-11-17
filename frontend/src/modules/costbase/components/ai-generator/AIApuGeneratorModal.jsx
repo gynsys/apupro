@@ -383,7 +383,7 @@ export default function AIApuGeneratorModal({
                   </h4>
                 </div>
                 <div className="flex items-center gap-2">
-                  {generator.debugInfo && (
+                  {isSuperAdmin && generator.debugInfo && (
                     <button
                       type="button"
                       onClick={async () => {

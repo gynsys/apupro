@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useContext } from 'react';
 import { toast } from 'react-hot-toast';
+import { AuthContext } from '../../../context/AuthContext';
 import {
   generateAIApu,
   getGlobalAiEngineMode,
@@ -8,6 +9,7 @@ import {
 import { saveDebugJsonFile } from '../../../utils/debugStorage';
 
 export function useApuGenerator({ setSettings }) {
+  const { checkAuth } = useContext(AuthContext) || {};
   const [loading, setLoading] = useState(false);
   const [item, setItem] = useState(null);
 
@@ -231,6 +233,9 @@ export function useApuGenerator({ setSettings }) {
       setIsClarifying(true);
     } else {
       dismissClarification();
+      if (typeof checkAuth === 'function') {
+        checkAuth();
+      }
       setChatHistory([]);
       setExactMatchCandidate(null);
 

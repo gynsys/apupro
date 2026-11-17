@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../../services/budgetService';
@@ -19,7 +19,8 @@ export function useBudgetWorksheet() {
   const [loading, setLoading] = useState(true);
   const { activeDatabase, setActiveDatabase, databases } = useDatabaseContext();
   const { config } = useContext(SiteConfigContext);
-  const { isAuthenticated, openAuthModal } = useContext(AuthContext) || {};
+  const { isAuthenticated, user, openAuthModal } = useContext(AuthContext) || {};
+  const guestAlertShownRef = useRef(false);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -89,6 +90,16 @@ export function useBudgetWorksheet() {
   const [editingChapterName, setEditingChapterName] = useState("");
 
   const isGuestDemo = id === 'example-demo' || !isAuthenticated;
+
+  const notifyGuestDemoSave = () => {
+    if (!isGuestDemo || guestAlertShownRef.current) return;
+    guestAlertShownRef.current = true;
+    toast('Modo prueba: los cambios se ven aquí, pero para guardar tus presupuestos en la nube debes registrarte gratis.', {
+      icon: 'ℹ️',
+      position: 'top-center',
+      duration: 6000,
+    });
+  };
 
   const loadBudget = async () => {
     try {
@@ -346,6 +357,7 @@ export function useBudgetWorksheet() {
         });
         setShowSearchModal(false);
         toast.success('Partida incluida en el presupuesto de ejemplo');
+        notifyGuestDemoSave();
         return;
       }
 
@@ -605,6 +617,7 @@ export function useBudgetWorksheet() {
           ...prev,
           items: (prev.items || []).map(i => i.id === itemId ? { ...i, quantity: parsedQty } : i)
         } : prev);
+        notifyGuestDemoSave();
         return;
       }
       await budgetService.updateItem(budget.id, itemId, { quantity: parsedQty });
@@ -822,8 +835,28 @@ export function useBudgetWorksheet() {
     setShowAIApuModal,
     openAIApuModal: () => {
       if (!isAuthenticated) {
-        toast('Regístrate gratis para crear APUs con Inteligencia Artificial', { icon: '✨' });
+        toast('Regístrate gratis para crear APUs con Inteligencia Artificial', {
+          icon: '✨',
+          position: 'top-center',
+          duration: 5000,
+        });
         openAuthModal?.('register');
+        return;
+      }
+      const isSuper = Boolean(
+        user?.is_superadmin === true ||
+        user?.email === 'admin@arko360.net' ||
+        user?.role === 'superadmin'
+      );
+      const aiUsed = Number(user?.ai_apus_generated || 0);
+      const aiMax = Number(user?.max_ai_apus || (!user?.has_ai_access ? 3 : 0));
+      if (!isSuper && !user?.has_ai_access && aiUsed >= aiMax) {
+        toast.error(`Has alcanzado el límite de ${aiMax} APUs gratuitos con IA. Activa el Plan IA para continuar.`, {
+          position: 'top-center',
+          duration: 6000,
+          icon: '🔒',
+        });
+        setShowSubscriptionModal(true);
         return;
       }
       setShowAIApuModal(true);

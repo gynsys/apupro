@@ -591,7 +591,7 @@ export default function AIApuGeneratorPage() {
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-end mb-4 pb-3 border-b border-slate-200">
             <div className="flex items-center gap-3">
-              {generator.debugInfo && (
+              {isSuperAdmin && generator.debugInfo && (
                 <button
                   type="button"
                   onClick={async () => {
