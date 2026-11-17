@@ -39,7 +39,7 @@ router = APIRouter()
 
 @router.get("/example-demo/summary", response_model=List[Dict[str, Any]])
 def get_example_budget_demo_summary(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
-    """Retorna el resumen del Presupuesto de ejemplo Kosto para visitantes sin sesión."""
+    """Retorna el resumen del Presupuesto de ejemplo Kostos para visitantes sin sesión."""
     demo = get_example_budget_demo_payload(db)
     summary = {k: v for k, v in demo.items() if k != "items"}
     return [summary]
@@ -47,7 +47,7 @@ def get_example_budget_demo_summary(db: Session = Depends(get_db)) -> List[Dict[
 
 @router.get("/example-demo", response_model=Dict[str, Any])
 def get_example_budget_demo(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Retorna el Presupuesto de ejemplo Kosto completo para visitantes sin sesión."""
+    """Retorna el Presupuesto de ejemplo Kostos completo para visitantes sin sesión."""
     return get_example_budget_demo_payload(db)
 
 

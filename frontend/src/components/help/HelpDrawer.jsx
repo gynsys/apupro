@@ -428,7 +428,7 @@ export default function HelpDrawer({ isOpen, onClose }) {
           <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 size={14} className="text-emerald-500" />
-              Documentación oficial Kosto
+              Documentación oficial Kostos
             </span>
             <span className="text-[11px] text-slate-400 font-mono">v1.0</span>
           </div>

@@ -115,7 +115,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
 
         <div>
           <h2 className="mt-2 text-center text-3xl font-extrabold text-gray-900" style={{ fontFamily: '"Barlow Condensed", sans-serif' }}>
-            Kosto
+            Kostos
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {view === 'register' ? 'Crea tu cuenta para acceder a la aplicacion' : 'Verifica tu correo electrónico'}

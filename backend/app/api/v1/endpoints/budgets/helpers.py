@@ -169,12 +169,12 @@ def log_backup_action(
         logger.error(f"Error al registrar accion de backup en auditoria: {e}", exc_info=True)
 
 
-EXAMPLE_BUDGET_NAME = "Presupuesto de ejemplo Kosto"
+EXAMPLE_BUDGET_NAME = "Presupuesto de ejemplo Kostos"
 
 
 def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[Budget]:
     """
-    Crea o clona el 'Presupuesto de ejemplo Kosto' para un usuario si no posee ningún presupuesto.
+    Crea o clona el 'Presupuesto de ejemplo Kostos' para un usuario si no posee ningún presupuesto.
     """
     target_user_id_str = str(target_user_id).strip()
     if not target_user_id_str:
@@ -186,7 +186,7 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
             return existing
 
         template = db.query(Budget).filter(
-            Budget.name.in_([EXAMPLE_BUDGET_NAME, "Presupuesto de Ejemplo costbase.net"])
+            Budget.name.in_([EXAMPLE_BUDGET_NAME, "Presupuesto de ejemplo Kosto", "Presupuesto de Ejemplo costbase.net"])
         ).first()
 
         if template:
@@ -356,10 +356,10 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
 
 
 def get_example_budget_demo_payload(db: Session) -> Dict[str, Any]:
-    """Retorna el 'Presupuesto de ejemplo Kosto' para modo invitado sin autenticación."""
+    """Retorna el 'Presupuesto de ejemplo Kostos' para modo invitado sin autenticación."""
     template = (
         db.query(Budget)
-        .filter(Budget.name.in_([EXAMPLE_BUDGET_NAME, "Presupuesto de Ejemplo costbase.net"]))
+        .filter(Budget.name.in_([EXAMPLE_BUDGET_NAME, "Presupuesto de ejemplo Kosto", "Presupuesto de Ejemplo costbase.net"]))
         .first()
     )
     if template:

@@ -26,7 +26,7 @@ export default function HeroSection({ onLoginClick }) {
           </h1>
           
           <p className="text-sm sm:text-lg md:text-xl text-slate-400 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed">
-            Kosto transforma la manera en que los profesionales de la construcción calculan, gestionan y exportan sus APUs. Precisión total, bases de datos en la nube y generación inteligente.
+            Kostos transforma la manera en que los profesionales de la construcción calculan, gestionan y exportan sus APUs. Precisión total, bases de datos en la nube y generación inteligente.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

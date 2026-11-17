@@ -48,7 +48,7 @@ export default function SharedPartidaPage() {
           <h1 className="text-lg font-bold text-slate-800">Partida no disponible</h1>
           <p className="mt-2 text-sm text-slate-500">{error}</p>
           <a href="/" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white">
-            <ArrowLeft size={16} /> Ir a Kosto
+            <ArrowLeft size={16} /> Ir a Kostos
           </a>
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function SharedPartidaPage() {
     <div className="min-h-screen bg-slate-100 pb-12">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
-          <a href="/" className="rounded-xl border border-slate-300 bg-white p-2 text-slate-600" title="Ir a Kosto">
+          <a href="/" className="rounded-xl border border-slate-300 bg-white p-2 text-slate-600" title="Ir a Kostos">
             <ArrowLeft size={18} />
           </a>
           <div className="min-w-0">
