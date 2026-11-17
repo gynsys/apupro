@@ -181,6 +181,7 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
             "unit_price": _number(row["unit_price"]),
             "executed_amount": _number(row["executed_amount"]),
             "current_amount": _number(row["current_amount"]),
+            "financial_weight": _number(row["financial_weight"]),
             "hours_per_unit": _number(row["hours_per_unit"]),
             "budget_hours": _number(row["budget_hours"]),
             "executed_hours": _number(row["executed_hours"]),

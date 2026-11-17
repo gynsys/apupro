@@ -526,6 +526,8 @@ class ControlObra:
             pct_item = q2(done / current * Decimal("100")) if current > 0 else Decimal("0")
             budget_hours = item.hours_for_quantity(current)
             executed_hours = item.hours_for_quantity(min(current, done))
+            current_amount = q2(current * item.unit_price)
+            total_amount = self.modified_amount
             rows.append({
                 "item_id": item_id,
                 "code": item.code,
@@ -538,7 +540,8 @@ class ControlObra:
                 "physical_percent": pct_item,
                 "unit_price": item.unit_price,
                 "executed_amount": q2(done * item.unit_price),
-                "current_amount": q2(current * item.unit_price),
+                "current_amount": current_amount,
+                "financial_weight": q2(current_amount / total_amount * Decimal("100")) if total_amount > 0 else Decimal("0"),
                 "hours_per_unit": item.hours_per_unit,
                 "budget_hours": budget_hours,
                 "executed_hours": executed_hours,

@@ -328,6 +328,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                         <th className="p-2 text-right">Modificada</th>
                         <th className="p-2 text-right">Ejecutada</th>
                         <th className="p-2 text-right">% Físico</th>
+                        <th className="p-2 text-right" title="% de obra programada financiero (peso de la partida respecto al monto total vigente)">% Obra prog. fin.</th>
                         <th className="p-2 text-right">HH pres.</th>
                         <th className="p-2 text-right">HH ejec.</th>
                         <th className="p-2 text-right">% HH</th>
@@ -346,6 +347,12 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                             <td className="p-2 text-right">{item.current_quantity} {item.unit}</td>
                             <td className="p-2 text-right">{item.executed_quantity} {item.unit}</td>
                             <td className="p-2 text-right font-semibold">{pct(item.physical_percent)}</td>
+                            <td className="p-2 text-right font-semibold text-indigo-700">
+                              {pct(
+                                item.financial_weight ??
+                                  (data.modified_amount > 0 ? (item.current_amount / data.modified_amount) * 100 : 0)
+                              )}
+                            </td>
                             <td className="p-2 text-right">{item.budget_hours}</td>
                             <td className="p-2 text-right">{item.executed_hours}</td>
                             <td className="p-2 text-right font-semibold">{pct(item.physical_percent_hh)}</td>
