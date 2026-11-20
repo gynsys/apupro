@@ -93,7 +93,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
             </div>
             <div>
               <h2 className="text-base font-bold text-amber-950">Importar presupuesto MDB</h2>
-              <p className="text-xs text-amber-800">Transforma un proyecto desde base de datos (.mdb) en un presupuesto de Kostos.</p>
+              <p className="text-xs text-amber-800">Transforma un proyecto desde base de datos (.mdb) en un presupuesto de Kostos360.</p>
             </div>
           </div>
           <button
@@ -162,7 +162,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
                 </p>
                 <p className="mt-1 text-amber-900/90">
                   {bridgeStatus === 'online'
-                    ? 'El .mdb se convierte en tu equipo y luego se sube a Kostos.'
+                    ? 'El .mdb se convierte en tu equipo y luego se sube a Kostos360.'
                     : 'Para formatos antiguos instala el puente local o usa el exportador manual.'}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-3">
@@ -248,7 +248,7 @@ export default function ImportMdbModal({ isOpen, onClose, onImported }) {
                 className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-700 disabled:opacity-40 cursor-pointer"
               >
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                {uploading ? 'Importando...' : 'Importar a Kostos'}
+                {uploading ? 'Importando...' : 'Importar a Kostos360'}
               </button>
             </>
           ) : (

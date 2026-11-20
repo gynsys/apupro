@@ -964,12 +964,12 @@ def get_robots_txt() -> str:
 def get_security_txt() -> str:
     """RFC 9116 security vulnerability reporting contact information."""
     return (
-        "# Security Contact Information for CostBase & Arko360\n"
+        "# Security Contact Information for Kostos360 & Arko360\n"
         "# RFC 9116 - A File Format to Aid in Security Vulnerability Disclosure\n\n"
         "Contact: mailto:security@costbase.net\n"
         "Contact: mailto:admin@arko360.net\n"
         "Expires: 2027-12-31T23:59:59.000Z\n"
         "Preferred-Languages: es, en\n"
-        "Canonical: https://www.costbase.net/.well-known/security.txt\n"
-        "Policy: https://www.costbase.net/security\n"
+        "Canonical: https://www.kostos360.com/.well-known/security.txt\n"
+        "Policy: https://www.kostos360.com/security\n"
     )

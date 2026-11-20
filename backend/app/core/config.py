@@ -90,7 +90,7 @@ class Settings(BaseSettings):
 
     # Resend Email Configuration
     RESEND_API_KEY: Optional[str] = None
-    RESEND_FROM_EMAIL: str = "CostBase <info@costbase.net>"
+    RESEND_FROM_EMAIL: str = "Kostos360 <info@costbase.net>"
 
     # Google OAuth
     GOOGLE_CLIENT_ID: Optional[str] = None
@@ -229,7 +229,7 @@ class Settings(BaseSettings):
     
     # Force verified domain sender
     EMAILS_FROM_EMAIL: str | None = "info@costbase.net" 
-    EMAILS_FROM_NAME: str = "CostBase Notificaciones"
+    EMAILS_FROM_NAME: str = "Kostos360 Notificaciones"
     
     # MinIO / S3
     MINIO_ENDPOINT: str = "minio:9000" # Internal Docker URL

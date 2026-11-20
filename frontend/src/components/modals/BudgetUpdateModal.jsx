@@ -68,7 +68,7 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
   const getDbLabel = (dbId) => {
     const found = availableDatabases.find((d) => d.id === dbId);
     if (found) return found.name;
-    if (dbId === 'master') return 'Base Maestra Kostos';
+    if (dbId === 'master') return 'Base Maestra Kostos360';
     if (dbId === 'base_septiembre') return 'Base Septiembre 2026';
     if (dbId === 'base_agosto') return 'Base Agosto 2026';
     if (dbId === 'base_junio') return 'Base Junio 2026';
@@ -290,7 +290,7 @@ export default function BudgetUpdateModal({ isOpen, onClose, budget, onSuccess }
                     {availableDatabases.map((dbItem) => (
                       <option key={dbItem.id} value={dbItem.id}>
                         {dbItem.id === 'master'
-                          ? 'Base Maestra Kostos (17.320 partidas)'
+                          ? 'Base Maestra Kostos360 (17.320 partidas)'
                           : dbItem.id === 'base_septiembre'
                           ? 'Base Septiembre 2026 (13.608 partidas)'
                           : dbItem.id === 'base_agosto'

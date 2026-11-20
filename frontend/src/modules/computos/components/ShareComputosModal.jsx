@@ -146,7 +146,7 @@ export default function ShareComputosModal({ isOpen, onClose, draft }) {
           <div className="bg-white/80 rounded-xl p-4 border border-amber-600/20 shadow-sm space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
               <UserPlus size={14} className="text-blue-600" />
-              <span>Enviar directamente a otro usuario de Kostos</span>
+              <span>Enviar directamente a otro usuario de Kostos360</span>
             </div>
             {recipient ? (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs">
@@ -227,7 +227,7 @@ export default function ShareComputosModal({ isOpen, onClose, draft }) {
             <Globe className="text-emerald-600 shrink-0 mt-0.5" size={18} />
             <div className="text-xs text-amber-950/80 leading-relaxed">
               <strong className="text-amber-950 block mb-0.5">Enlace para importar (30 días):</strong>
-              Cualquier usuario de Kostos con este enlace podrá ver las mediciones e <strong>importar una copia independiente</strong> a sus Cómputos Guardados.
+              Cualquier usuario de Kostos360 con este enlace podrá ver las mediciones e <strong>importar una copia independiente</strong> a sus Cómputos Guardados.
             </div>
           </div>
 

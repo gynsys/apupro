@@ -23,7 +23,7 @@ export default function PartidasScreen({ activePartida, scrolled, gearActive }) 
           <ArrowLeft size={17} />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-extrabold text-slate-800">Presupuesto de Ejemplo costbase.net</p>
+          <p className="truncate text-sm font-extrabold text-slate-800">Presupuesto de Ejemplo kostos360.com</p>
           <p className="text-[10px] text-slate-400">Presupuesto · 6 partidas · USD</p>
         </div>
         <div className="ml-auto flex items-center gap-1 text-[9px] font-medium text-slate-600">

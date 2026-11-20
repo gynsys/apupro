@@ -245,7 +245,7 @@ def test_verification_delivery(target_email: str) -> Dict[str, Any]:
         raise ValueError("Dirección de correo electrónico inválida para la prueba")
 
     test_code = "998877"
-    subject = "Prueba de Diagnóstico: Código de Verificación CostBase"
+    subject = "Prueba de Diagnóstico: Código de Verificación Kostos360"
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
@@ -257,7 +257,7 @@ def test_verification_delivery(target_email: str) -> Dict[str, Any]:
         </p>
         <p>Si recibes este mensaje, el sistema de transporte de correos está 100% operativo.</p>
         <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #888;">CostBase Platform Diagnostics.</p>
+        <p style="font-size: 12px; color: #888;">Kostos360 Platform Diagnostics.</p>
       </body>
     </html>
     """
@@ -394,13 +394,13 @@ def send_reset_password_email(email_to: str, code: str) -> bool:
     if not code:
         raise ValueError("code no puede estar vacío")
 
-    subject = "Recuperación de contraseña en CostBase"
+    subject = "Recuperación de contraseña en Kostos360"
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
         <h2 style="color: #1A6BB5;">Recuperación de contraseña</h2>
         <p>Hola,</p>
-        <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en CostBase.</p>
+        <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en Kostos360.</p>
         <p>Tu código de recuperación es:</p>
         <p style="margin: 30px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1A6BB5;">
             {code}
@@ -408,7 +408,7 @@ def send_reset_password_email(email_to: str, code: str) -> bool:
         <p>Ingresa este código en la plataforma para crear una nueva contraseña.</p>
         <p>Si no solicitaste esto, puedes ignorar este correo de forma segura.</p>
         <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #888;">El equipo de CostBase.</p>
+        <p style="font-size: 12px; color: #888;">El equipo de Kostos360.</p>
       </body>
     </html>
     """
@@ -421,11 +421,11 @@ def send_verification_email(email_to: str, code: str) -> bool:
     if not code:
         raise ValueError("code no puede estar vacío")
 
-    subject = "Verifica tu correo electrónico en CostBase"
+    subject = "Verifica tu correo electrónico en Kostos360"
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-        <h2 style="color: #1A6BB5;">¡Bienvenido a CostBase!</h2>
+        <h2 style="color: #1A6BB5;">¡Bienvenido a Kostos360!</h2>
         <p>Hola,</p>
         <p>Gracias por registrarte. Para comenzar a utilizar la plataforma, por favor verifica tu dirección de correo electrónico ingresando el siguiente código:</p>
         <p style="margin: 30px 0; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1A6BB5;">
@@ -433,7 +433,7 @@ def send_verification_email(email_to: str, code: str) -> bool:
         </p>
         <p>Si no creaste esta cuenta, ignora este mensaje.</p>
         <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #888;">El equipo de CostBase.</p>
+        <p style="font-size: 12px; color: #888;">El equipo de Kostos360.</p>
       </body>
     </html>
     """
@@ -451,22 +451,22 @@ def send_backup_email(to_email: str, budget_name: str, backup_file_path: str, ba
     html_content = f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-        <h2 style="color: #1A6BB5;">Backup de Presupuesto CostBase</h2>
+        <h2 style="color: #1A6BB5;">Backup de Presupuesto Kostos360</h2>
         <p>Hola,</p>
         <p>Adjunto encontrarás el backup encriptado de tu presupuesto: <strong>{budget_name}</strong></p>
         <p><strong>Detalles del backup:</strong></p>
         <ul>
           <li>Nombre del presupuesto: {budget_name}</li>
-          <li>Formato: CostBase Backup (.cb)</li>
+          <li>Formato: Kostos360 Backup (.cb)</li>
           <li>Encriptación: AES-256</li>
           <li>Seguridad: Solo puede ser importado por tu cuenta</li>
         </ul>
-        <p>Para restaurar este backup, utiliza la función de importación en la plataforma CostBase.</p>
+        <p>Para restaurar este backup, utiliza la función de importación en la plataforma Kostos360.</p>
         <p style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
           <strong>⚠️ Importante:</strong> Este archivo contiene información sensible y está encriptado. No lo compartas con terceros.
         </p>
         <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #888;">El equipo de CostBase.</p>
+        <p style="font-size: 12px; color: #888;">El equipo de Kostos360.</p>
       </body>
     </html>
     """
@@ -531,14 +531,14 @@ def send_subscription_request_email(user_email: str, plan_name: str) -> bool:
     <html>
       <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
         <h2 style="color: #1A6BB5;">¡Nueva Solicitud de Plan Premium!</h2>
-        <p>Un usuario ha solicitado adquirir un plan en CostBase.</p>
+        <p>Un usuario ha solicitado adquirir un plan en Kostos360.</p>
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
             <p style="margin: 0 0 10px 0;"><strong>Usuario (Email):</strong> {user_email}</p>
             <p style="margin: 0;"><strong>Plan Solicitado:</strong> {plan_name}</p>
         </div>
         <p>Por favor, contacta a este usuario lo antes posible para gestionar el pago y activarle su nuevo plan desde el panel de administración.</p>
         <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #888;">El equipo de CostBase.</p>
+        <p style="font-size: 12px; color: #888;">El equipo de Kostos360.</p>
       </body>
     </html>
     """
@@ -552,8 +552,8 @@ def send_payment_instructions_email(user_email: str, plan_name: str) -> bool:
     if not plan_name:
         raise ValueError("plan_name no puede estar vacío")
 
-    subject = f"Instrucciones para activar tu Plan {plan_name} en CostBase 🚀"
-    bdv_logo = "https://costbase.net/images/bdv_logo.png"
+    subject = f"Instrucciones para activar tu Plan {plan_name} en Kostos360 🚀"
+    bdv_logo = "https://kostos360.com/images/bdv_logo.png"
     binance_logo = "https://cryptologos.cc/logos/tether-usdt-logo.png"
 
     prices = {
@@ -624,7 +624,7 @@ def send_payment_instructions_email(user_email: str, plan_name: str) -> bool:
         <p>Nuestro equipo verificará la transacción y activará los límites de tu <strong>Plan {plan_name}</strong> en tiempo récord.</p>
 
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
-        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Gracias por confiar en el equipo de CostBase.</p>
+        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Gracias por confiar en el equipo de Kostos360.</p>
       </body>
     </html>
     """
@@ -660,7 +660,7 @@ def send_plan_activated_email(user_email: str, plan_name: str, is_test_mode: boo
         <p>Inicia sesión en la plataforma para comenzar a disfrutar de todas estas herramientas.</p>
 
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
-        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Gracias por confiar en el equipo de CostBase.</p>
+        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Gracias por confiar en el equipo de Kostos360.</p>
       </body>
     </html>
     """
@@ -688,7 +688,7 @@ def send_database_published_email(to_email: str, db_name: str, frequency: str, p
         </div>
 
         <p>Hola,</p>
-        <p>Te informamos que se ha publicado una nueva base de datos de costos en CostBase: <strong>{db_name}</strong>.</p>
+        <p>Te informamos que se ha publicado una nueva base de datos de costos en Kostos360: <strong>{db_name}</strong>.</p>
 
         <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 25px 0;">
             <h3 style="margin-top: 0; color: #0f172a; font-size: 18px;">Detalles de la Actualización</h3>
@@ -702,7 +702,7 @@ def send_database_published_email(to_email: str, db_name: str, frequency: str, p
         <p style="font-size: 14px; color: #64748b; margin-top: 20px;">Puedes seleccionarla directamente en el creador de presupuestos o consultar sus partidas en el módulo Cost360.</p>
 
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0 20px 0;" />
-        <p style="font-size: 13px; color: #94a3b8; text-align: center;">El equipo de CostBase.</p>
+        <p style="font-size: 13px; color: #94a3b8; text-align: center;">El equipo de Kostos360.</p>
       </body>
     </html>
     """

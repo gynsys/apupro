@@ -1,4 +1,4 @@
-// Datos estructurados del Centro de Ayuda de CostBase
+// Datos estructurados del Centro de Ayuda de Kostos360
 // Extraídos y enriquecidos a partir de documentacion_usuario
 
 export const HELP_CATEGORIES = [
@@ -34,7 +34,7 @@ export const HELP_ARTICLES = [
       },
       {
         title: 'Paso 4: Añadir Partidas y APU',
-        desc: 'Puedes importar partidas desde la Base Maestra, crear partidas con la Inteligencia Artificial de Kostos o incorporar tus partidas personalizadas.',
+        desc: 'Puedes importar partidas desde la Base Maestra, crear partidas con la Inteligencia Artificial de Kostos360 o incorporar tus partidas personalizadas.',
       },
       {
         title: 'Paso 5: Configurar Factores Globales',
@@ -96,7 +96,7 @@ export const HELP_ARTICLES = [
       },
       {
         title: 'Importación a otra cuenta',
-        desc: 'Si el destinatario es usuario de Kostos, podrá importar el presupuesto completo a su propia cuenta con un solo clic.',
+        desc: 'Si el destinatario es usuario de Kostos360, podrá importar el presupuesto completo a su propia cuenta con un solo clic.',
       }
     ],
     tips: [
@@ -116,7 +116,7 @@ export const HELP_ARTICLES = [
     tags: ['bases de datos', 'base maestra', 'base personalizada', 'inflacion', 'costbase', 'cost360', 'duplicar'],
     steps: [
       {
-        title: 'Base Maestra (Kostos)',
+        title: 'Base Maestra (Kostos360)',
         desc: 'Base de datos oficial con miles de partidas de construcción estándar, rendimientos e insumos de referencia continuamente auditados.',
       },
       {
@@ -225,8 +225,8 @@ export const HELP_FAQS = [
   {
     id: 'faq-1',
     category: 'General',
-    q: '¿Qué es Kostos?',
-    a: 'Kostos es una plataforma SaaS profesional para la gestión de presupuestos de construcción, generación interactiva de Análisis de Precios Unitarios (APU) asistida por IA y actualización de bases de datos de costos en tiempo real.'
+    q: '¿Qué es Kostos360?',
+    a: 'Kostos360 es una plataforma SaaS profesional para la gestión de presupuestos de construcción, generación interactiva de Análisis de Precios Unitarios (APU) asistida por IA y actualización de bases de datos de costos en tiempo real.'
   },
   {
     id: 'faq-2',
@@ -238,7 +238,7 @@ export const HELP_FAQS = [
     id: 'faq-3',
     category: 'Backup',
     q: '¿Qué es un archivo con extensión .cb?',
-    a: 'Es un respaldo criptográfico de Kostos que contiene todas las partidas, cuadrillas, equipos, materiales y cálculos de tu presupuesto. Solo tu cuenta puede restaurarlo para proteger tu información.'
+    a: 'Es un respaldo criptográfico de Kostos360 que contiene todas las partidas, cuadrillas, equipos, materiales y cálculos de tu presupuesto. Solo tu cuenta puede restaurarlo para proteger tu información.'
   },
   {
     id: 'faq-4',

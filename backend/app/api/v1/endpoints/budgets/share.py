@@ -135,12 +135,12 @@ def generate_share_link(
     db.refresh(budget)
 
     origin = request.headers.get("origin")
-    if origin and ("costbase.net" in origin or "localhost" in origin):
+    if origin and ("kostos360.com" in origin or "costbase.net" in origin or "localhost" in origin):
         frontend_base_url = origin.rstrip("/")
     else:
-        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.kostos360.com")
         if "gynsys.net" in frontend_base_url:
-            frontend_base_url = "https://www.costbase.net"
+            frontend_base_url = "https://www.kostos360.com"
 
     share_url = f"{frontend_base_url}/budgets/shared/{budget.share_token}"
 
@@ -187,12 +187,12 @@ def generate_item_share_link(
     )
 
     origin = request.headers.get("origin")
-    if origin and ("costbase.net" in origin or "localhost" in origin):
+    if origin and ("kostos360.com" in origin or "costbase.net" in origin or "localhost" in origin):
         frontend_base_url = origin.rstrip("/")
     else:
-        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+        frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.kostos360.com")
         if "gynsys.net" in frontend_base_url:
-            frontend_base_url = "https://www.costbase.net"
+            frontend_base_url = "https://www.kostos360.com"
 
     return {
         "share_token": token,
@@ -500,7 +500,7 @@ def get_shared_budget_preview(
     if not budget:
         raise HTTPException(status_code=404, detail="Presupuesto no encontrado o el enlace ha sido revocado")
 
-    owner_name = "Usuario de CostBase"
+    owner_name = "Usuario de Kostos360"
     with ArkoSessionLocal() as arko_db:
         owner = arko_db.query(ArkoAdmin).filter(
             ArkoAdmin.id == int(budget.user_id) if str(budget.user_id).isdigit() else None
@@ -683,11 +683,11 @@ def _clone_computos_draft_for_user(
 
 def _resolve_frontend_base_url(request: Request) -> str:
     origin = request.headers.get("origin")
-    if origin and ("costbase.net" in origin or "localhost" in origin):
+    if origin and ("kostos360.com" in origin or "costbase.net" in origin or "localhost" in origin):
         return origin.rstrip("/")
-    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.costbase.net")
+    frontend_base_url = getattr(settings, "FRONTEND_URL", "https://www.kostos360.com")
     if "gynsys.net" in frontend_base_url:
-        return "https://www.costbase.net"
+        return "https://www.kostos360.com"
     return frontend_base_url.rstrip("/")
 
 
@@ -799,7 +799,7 @@ def get_shared_computos_preview(
         if not draft:
             raise HTTPException(status_code=404, detail="La planilla compartida ya no está disponible")
 
-        owner_name = owner.full_name or owner.username or "Usuario de Kostos"
+        owner_name = owner.full_name or owner.username or "Usuario de Kostos360"
         is_own = bool(current_user and str(current_user.id) == str(owner_id))
         items = draft.get("items") if isinstance(draft.get("items"), list) else []
 

@@ -174,7 +174,7 @@ export default function ClarificationAlertCard({
               <HiSparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-amber-900 text-base">Asistente Kostos</h3>
+              <h3 className="font-bold text-amber-900 text-base">Asistente Kostos360</h3>
               <p className="text-xs text-amber-800">Generación técnica estructurada</p>
             </div>
           </div>

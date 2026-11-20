@@ -110,7 +110,7 @@ export default function SharedComputosPage() {
               onClick={() => navigate('/budgets')}
               className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold cursor-pointer"
             >
-              Ir a Kostos
+              Ir a Kostos360
             </button>
           </div>
         ) : draft ? (

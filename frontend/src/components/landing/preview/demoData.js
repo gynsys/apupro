@@ -1,8 +1,8 @@
 export const demoBudgets = [
   {
     id: 1,
-    name: 'Presupuesto de Ejemplo costbase.net',
-    client: 'Kostos Demo',
+    name: 'Presupuesto de Ejemplo kostos360.com',
+    client: 'Kostos360 Demo',
     items: 6,
     total: '$ 1.361,58',
   },

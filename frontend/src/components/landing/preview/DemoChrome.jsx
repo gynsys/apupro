@@ -10,7 +10,7 @@ export default function DemoChrome({ children, height = 'h-[520px] sm:h-[600px]'
           <div className="h-3 w-3 rounded-full bg-green-500/80" />
         </div>
         <div className="mx-auto w-72 select-none rounded-md border border-slate-700/60 bg-slate-800/60 px-4 py-1 text-center font-mono text-xs text-slate-300">
-          app.costbase.net
+          kostos360.com
         </div>
       </div>
       <div className="relative h-[calc(100%-2.75rem)] overflow-hidden bg-[#f0f4fd] text-slate-800">

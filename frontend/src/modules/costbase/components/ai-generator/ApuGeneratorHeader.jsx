@@ -19,7 +19,7 @@ export default function ApuGeneratorHeader({
           <button 
             onClick={onBack}
             className="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 hover:text-blue-600 transition-colors shrink-0 shadow-sm cursor-pointer"
-            title={item ? (creationMode === 'import' ? "Volver al Selector de APU" : "Volver al Generador") : "Volver a Kostos"}
+            title={item ? (creationMode === 'import' ? "Volver al Selector de APU" : "Volver al Generador") : "Volver a Kostos360"}
           >
             <ArrowLeft size={20} />
           </button>

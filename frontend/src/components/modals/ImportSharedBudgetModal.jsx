@@ -143,7 +143,7 @@ export default function ImportSharedBudgetModal({ isOpen, onClose, onSuccess }) 
               <input
                 type="text"
                 autoFocus
-                placeholder="https://www.costbase.net/budgets/shared/cb_... o cb_..."
+                placeholder="https://www.kostos360.com/budgets/shared/cb_... o cb_..."
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
