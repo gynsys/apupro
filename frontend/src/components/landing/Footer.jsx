@@ -6,9 +6,9 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kostos Logo" className="w-8 h-8 object-contain" />
+            <img src={`${import.meta.env.BASE_URL}kosto-logo.png`} alt="Kostos360 Logo" className="w-8 h-8 object-contain" />
             <span className="text-xl font-extrabold text-white">
-              Kostos
+              Kostos360
             </span>
           </div>
           
@@ -20,7 +20,7 @@ export default function Footer() {
         </div>
         
         <div className="mt-8 pt-8 border-t border-slate-800/50 text-center text-sm text-slate-500">
-          &copy; {new Date().getFullYear()} Kostos. Creado por Ingeniería Arko 360. Todos los derechos reservados.
+          &copy; {new Date().getFullYear()} Kostos360. Creado por Ingeniería Arko 360. Todos los derechos reservados.
         </div>
       </div>
     </footer>

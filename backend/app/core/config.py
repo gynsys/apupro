@@ -85,8 +85,8 @@ class Settings(BaseSettings):
         return v
     
     # URLs
-    FRONTEND_URL: str = "https://www.costbase.net"
-    BACKEND_URL: str = "https://costbase.net"
+    FRONTEND_URL: str = "https://www.kostos360.com"
+    BACKEND_URL: str = "https://kostos360.com"
 
     # Resend Email Configuration
     RESEND_API_KEY: Optional[str] = None
@@ -149,6 +149,8 @@ class Settings(BaseSettings):
             "https://superadmin.arko360.net",
             "https://api.arko360.net",
             
+            "https://kostos360.com",
+            "https://www.kostos360.com",
             "https://costbase.net",
             "https://www.costbase.net",
            

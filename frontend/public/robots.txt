@@ -1,4 +1,4 @@
-# Robots.txt for CostBase & Arko360 (https://www.costbase.net)
+# Robots.txt for Kostos360 & Arko360 (https://www.kostos360.com)
 
 User-agent: *
 
@@ -21,4 +21,4 @@ Disallow: /private/
 Crawl-delay: 10
 
 # Sitemap
-Sitemap: https://www.costbase.net/sitemap.xml
+Sitemap: https://www.kostos360.com/sitemap.xml
