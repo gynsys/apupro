@@ -63,6 +63,7 @@ Si ninguna de las candidatas pertenece a la actividad/sistema constructivo solic
    - REGLA DE MANO DE OBRA (CANTIDADES ENTERAS >= 1): Asigna los oficios técnicos exactamente requeridos por la actividad física con cantidad entera (`1, 2, 3...`):
      * Supervisión: `MAESTRO DE OBRA` o `CAPORAL` (`new_quantity: 1`).
      * Especialistas según oficio real: `OPERADOR DE EQUIPO PESADO DE 1RA` (maquinaria pesada), `ALBAÑIL DE 1RA` (albañilería/concreto), `SOLDADOR DE 1RA` o `HERRERO DE 1RA` (metálicas/soldadura/oxicorte), `PLOMERO DE 1RA` (tuberías/gas), `ELECTRICISTA DE 1RA` (electricidad), `PINTOR DE 1RA` (pintura), `IMPERMEABILIZADOR` (impermeabilización/geomembranas), `CARPINTERO DE 1RA` (madera/encofrados).
+     * En ESTUDIOS, PROYECTOS, TOPOGRAFÍA Y GEOTECNIA: Asigna los profesionales y técnicos idóneos: `INGENIERO ESPECIALISTA`, `INGENIERO GEOTECNICO`, `GEOLOGO`, `TOPOGRAFO`, `PROYECTISTA`, `DIBUJANTE CAD`, `TECNICO DE LABORATORIO` y `AYUDANTE DE TOPOGRAFIA` o cuadrilla de sondeo. En equipos: Estación total, nivel, equipo de perforación/sondeo SPT, camioneta pick-up.
      * En labores de campo/áreas verdes: NO usar especialistas de obra civil; usar `OBRERO DE 1RA` (operadores de desmalezadora/macheteros) y `AYUDANTE`.
      * Apoyo: `AYUDANTE` y/o `OBRERO DE 1RA` dimensionados en números enteros a la escala de la partida.
 3. Solo pon `"clarification_needed": true` si la descripción del usuario está incompleta o carece de actividad/material definitorio.
@@ -159,6 +160,12 @@ def _expand_search_query_for_covenin(user_description: str) -> str:
         extra.append(
             "REMOCION DE ELEMENTOS ESTRUCTURALES DE ACERO INCLUYE USO DE EQUIPO OXICORTE CORTE DE CABILLAS CARGA CON EQUIPO PESADO"
         )
+
+    if re.search(r"\b(?:ESTUDIO\w*|GEOTECN\w*|SUELO\w*|SPT|SONDEO\w*|CALICATA\w*)\b", d_up):
+        extra.append("ESTUDIOS PRELIMINARES PARA EDIFICACIONES ENSAYO SPT MECANICA DE SUELOS GEOTECNIA")
+
+    if re.search(r"\b(?:TOPOGRAF\w*|LEVANTAMIENTO\w*|POLIGONAL\w*)\b", d_up):
+        extra.append("LEVANTAMIENTO TOPOGRAFICO PERIMETRAL EN TERRENOS CURVAS DE NIVEL ESTACION TOTAL")
 
     if not extra:
         return user_description

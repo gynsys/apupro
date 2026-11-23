@@ -63,7 +63,7 @@ export default function BudgetWorksheetView() {
               ws.setSettings(prev => ({ ...prev, ...updated }));
               ws.setShowSettings(false);
               if (typeof ws.loadBudget === 'function') {
-                ws.loadBudget();
+                ws.loadBudget(true);
               }
             }}
           />

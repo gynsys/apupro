@@ -8,7 +8,9 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.api.v1.endpoints.budgets.helpers import get_budget_or_404
 from app.core.logging import logger
+from app.crud.crud_costbase import get_item_by_code_or_covpar
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import (
@@ -38,9 +40,7 @@ def add_item_to_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> BudgetItem:
     """Agrega una partida o capitulo al presupuesto, poblando sus insumos APU."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
 
     # Verificar limite de partidas por plan
     check_items_limit(current_user, budget_id)
@@ -68,10 +68,16 @@ def add_item_to_budget(
         return db_item
 
     # 2. Guardar el APU en BudgetAPU
-    # PRIORIDAD: Si el frontend envio insumos pre-calculados (con factores de inflacion aplicados),
-    # se usan directamente. Si no, se copia desde la base maestra de Cost360 (comportamiento original).
-    if item_in.materials is not None or item_in.equipments is not None or item_in.labors is not None:
-        # --- Ruta A: Frontend proveyo los insumos (base personalizada con factores aplicados) ---
+    # PRIORIDAD: Si el frontend envió insumos no vacíos (con factores aplicados), se usan directamente.
+    # Si las listas vienen vacías o None, se copia desde el catálogo maestro/covenin de Cost360.
+    has_custom_components = bool(
+        (item_in.materials and len(item_in.materials) > 0)
+        or (item_in.equipments and len(item_in.equipments) > 0)
+        or (item_in.labors and len(item_in.labors) > 0)
+    )
+
+    if has_custom_components:
+        # --- Ruta A: Frontend proveyó los insumos con factores o precios aplicados ---
         for mat in (item_in.materials or []):
             db_mat = DBMaterial(
                 budget_item_id=db_item.id,
@@ -107,8 +113,11 @@ def add_item_to_budget(
             )
             db.add(db_lab)
     else:
-        # --- Ruta B: Fallback — Copiar desde la base maestra de Cost360 sin factores ---
-        cost_item = db.query(CostItem).filter(CostItem.CodPar == item_in.cod_par).first()
+        # --- Ruta B: Fallback — Copiar desde catálogo de Cost360 sin insumos vacíos ---
+        cost_item = get_item_by_code_or_covpar(db, item_in.cod_par)
+        if not cost_item and item_in.cov_par:
+            cost_item = get_item_by_code_or_covpar(db, item_in.cov_par)
+
         if cost_item:
             for mat in cost_item.apu_materials:
                 db_mat = DBMaterial(
@@ -165,9 +174,7 @@ def delete_item_from_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, bool]:
     """Elimina una partida del presupuesto."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
 
     item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not item:
@@ -185,9 +192,7 @@ def reorder_budget_items(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Dict[str, bool]:
     """Reordena las partidas de un presupuesto segun el listado de IDs provisto."""
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
 
     for index, item_id in enumerate(item_ids):
         db.query(BudgetItem).filter(
@@ -208,9 +213,7 @@ def update_item_in_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> BudgetItem:
     """Actualiza una partida dentro de un presupuesto."""
-    db_budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
-    if not db_budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    db_budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
 
     db_item = db.query(BudgetItem).filter(BudgetItem.id == item_id, BudgetItem.budget_id == budget_id).first()
     if not db_item:
@@ -234,9 +237,7 @@ def recalibrate_budget(
     if not budget_id or not isinstance(budget_id, str):
         raise HTTPException(status_code=400, detail="Identificador de presupuesto inválido.")
 
-    db_budget = db.query(Budget).filter(Budget.id == budget_id, Budget.user_id == str(current_user.id)).first()
-    if not db_budget:
-        raise HTTPException(status_code=404, detail="Presupuesto no encontrado.")
+    db_budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
 
     try:
         return recalibrate_budget_performances(budget_id, db, dry_run=False)

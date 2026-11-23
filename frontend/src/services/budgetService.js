@@ -17,13 +17,14 @@ function notifyOfflineChanged() {
   }
 }
 
-const getAuthHeaders = () => {
+const getAuthHeaders = (contentType = 'application/json') => {
   const token = typeof localStorage !== 'undefined'
     ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token'))
     : null;
-  const headers = {
-    'Content-Type': 'application/json',
-  };
+  const headers = {};
+  if (contentType) {
+    headers['Content-Type'] = contentType;
+  }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -52,6 +53,7 @@ export const budgetService = {
     }
     try {
       const response = await fetch(`${API_URL}/budgets/`, {
+        headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Error al cargar presupuestos');
@@ -68,6 +70,7 @@ export const budgetService = {
                 return;
               }
               const detailRes = await fetch(`${API_URL}/budgets/${b.id}`, {
+                headers: getAuthHeaders(),
                 credentials: 'include',
               });
               if (detailRes.ok) {
@@ -80,7 +83,7 @@ export const budgetService = {
       }
       return data;
     } catch (err) {
-      if (isDeviceOfflineModeActive()) {
+      if (isDeviceOfflineModeActive() && typeof navigator !== 'undefined' && navigator.onLine === false) {
         const cached = await getOfflineBudgetsList();
         if (cached) return cached;
       }
@@ -90,6 +93,7 @@ export const budgetService = {
 
   generateAPUReport: async (id) => {
     const response = await fetch(`${API_URL}/budgets/${id}/report`, {
+      headers: getAuthHeaders(),
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al generar reporte');
@@ -110,6 +114,7 @@ export const budgetService = {
       const response = await fetch(
         `${API_URL}/cost360/${endpoint}?search=${encodeURIComponent(query)}&database_id=${databaseId}&limit=${limit}`,
         {
+          headers: getAuthHeaders(),
           credentials: 'include',
           signal,
         }
@@ -138,7 +143,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(data)
       });
@@ -191,7 +196,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}/${componentId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(data)
       });
@@ -276,6 +281,7 @@ export const budgetService = {
     }
     try {
       const response = await fetch(`${API_URL}/budgets/${id}`, {
+        headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Error al cargar el presupuesto');
@@ -285,7 +291,7 @@ export const budgetService = {
       }
       return data;
     } catch (err) {
-      if (isDeviceOfflineModeActive()) {
+      if (isDeviceOfflineModeActive() && typeof navigator !== 'undefined' && navigator.onLine === false) {
         const cached = await getOfflineBudgetDetail(id);
         if (cached) return cached;
       }
@@ -296,7 +302,7 @@ export const budgetService = {
   create: async (data) => {
     const response = await fetch(`${API_URL}/budgets/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify(data)
     });
@@ -314,7 +320,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(data)
       });
@@ -343,12 +349,29 @@ export const budgetService = {
   },
 
   deleteItem: async (budgetId, itemId) => {
+    if (budgetId === 'example-demo') {
+      try {
+        const cached = sessionStorage.getItem('kosto_guest_example_demo');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed.items)) {
+            parsed.items = parsed.items.filter((it) => String(it.id) !== String(itemId));
+            sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify(parsed));
+          }
+        }
+      } catch (_) {}
+      return { ok: true };
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
-        credentials: 'include'
+        credentials: 'include',
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!response.ok) throw new Error('Error al eliminar partida');
       const resData = await response.json();
       if (isDeviceOfflineModeActive()) {
@@ -362,6 +385,10 @@ export const budgetService = {
       }
       return resData;
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('La eliminación tardó demasiado tiempo. Por favor reintenta.');
+      }
       if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
         await enqueueOfflineOperation({
           type: 'DELETE_BUDGET_ITEM',
@@ -386,7 +413,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/reorder`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(itemIds)
       });
@@ -407,13 +434,27 @@ export const budgetService = {
   },
 
   update: async (id, data) => {
+    if (id === 'example-demo') {
+      try {
+        const cachedDemo = sessionStorage.getItem('kosto_guest_example_demo');
+        if (cachedDemo) {
+          const parsed = JSON.parse(cachedDemo);
+          sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify({ ...parsed, ...data }));
+        }
+      } catch (_) {}
+      return { id, ...data };
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_URL}/budgets/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
         throw new Error(errJson.detail || 'Error al actualizar el presupuesto');
@@ -431,6 +472,10 @@ export const budgetService = {
       }
       return updated;
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('La actualización tardó demasiado tiempo. Por favor reintenta.');
+      }
       if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
         await enqueueOfflineOperation({
           type: 'UPDATE_BUDGET',
@@ -471,13 +516,36 @@ export const budgetService = {
 
   // ITEMS (Partidas del Presupuesto)
   addItem: async (budgetId, data) => {
+    if (budgetId === 'example-demo') {
+      const demoItem = {
+        id: `demo-item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        budget_id: budgetId,
+        is_pending: false,
+        ...data,
+      };
+      try {
+        const cached = sessionStorage.getItem('kosto_guest_example_demo');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const items = Array.isArray(parsed.items) ? [...parsed.items] : [];
+          items.push(demoItem);
+          parsed.items = items;
+          sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify(parsed));
+        }
+      } catch (_) {}
+      return demoItem;
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         if (response.status === 403) {
@@ -497,6 +565,10 @@ export const budgetService = {
       }
       return created;
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        throw new Error('La inclusión de la partida tardó demasiado tiempo. Por favor reintenta.');
+      }
       if (isDeviceOfflineModeActive() && isNetworkOfflineError(err)) {
         const tempItem = {
           id: `offline-item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -528,7 +600,7 @@ export const budgetService = {
   importSharedPartida: async (budgetId, token) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/import-shared-partida`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify({ token })
     });
@@ -547,6 +619,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/${budgetId}/items/${itemId}/${type}/${componentId}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
         credentials: 'include'
       });
       if (!response.ok) throw new Error(`Error al eliminar componente de tipo ${type}`);
@@ -592,6 +665,7 @@ export const budgetService = {
   exportBackup: async (budgetId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/backup`, {
       method: 'POST',
+      headers: getAuthHeaders(),
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Error al exportar backup');
@@ -604,6 +678,7 @@ export const budgetService = {
 
     const response = await fetch(`${API_URL}/budgets/import-backup`, {
       method: 'POST',
+      headers: getAuthHeaders(null),
       credentials: 'include',
       body: formData
     });
@@ -622,6 +697,7 @@ export const budgetService = {
 
     const response = await fetch(`${API_URL}/budgets/import/preview`, {
       method: 'POST',
+      headers: getAuthHeaders(null),
       credentials: 'include',
       body: formData
     });
@@ -638,7 +714,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/import/commit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(payload)
       });
@@ -652,6 +728,7 @@ export const budgetService = {
       if (isDeviceOfflineModeActive() && result?.budget_id) {
         try {
           const detailRes = await fetch(`${API_URL}/budgets/${result.budget_id}`, {
+            headers: getAuthHeaders(),
             credentials: 'include',
           });
           if (detailRes.ok) {
@@ -723,7 +800,7 @@ export const budgetService = {
   generateImportApu: async (payload) => {
     const response = await fetch(`${API_URL}/budgets/import/generate-apu`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify(payload)
     });
@@ -754,7 +831,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/import/resolve-computo`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(payload)
       });
@@ -805,7 +882,7 @@ export const budgetService = {
     try {
       const response = await fetch(`${API_URL}/budgets/import/enrich-description`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(payload)
       });
@@ -841,7 +918,7 @@ export const budgetService = {
   exportExcel: async (budgetId, payload = null) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/export-excel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify(payload || {})
     });
@@ -870,7 +947,7 @@ export const budgetService = {
   exportAllApusExcel: async (budgetId, payload = null) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/export-apus-excel`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       credentials: 'include',
       body: JSON.stringify(payload || {})
     });
@@ -899,6 +976,7 @@ export const budgetService = {
   recalibratePerformances: async (budgetId) => {
     const response = await fetch(`${API_URL}/budgets/${budgetId}/recalibrate-performances`, {
       method: 'POST',
+      headers: getAuthHeaders(),
       credentials: 'include'
     });
     if (!response.ok) {

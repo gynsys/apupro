@@ -2,6 +2,7 @@ import os
 import random
 import re
 import string
+import secrets
 import shutil
 import logging
 from datetime import datetime, timedelta
@@ -16,6 +17,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import or_, func
 import jwt
+import requests
+import google.auth.transport.requests
+from google.oauth2 import id_token
 
 from app.core.logging import logger
 from app.db.arko_base import ArkoSessionLocal
@@ -49,7 +53,7 @@ router = APIRouter()
 
 @router.post("/auth/login")
 @limiter.limit("5/minute")
-def login_arko_admin(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
+def login_arko_admin(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends()) -> Dict[str, Any]:
     try:
         with get_db_session() as db:
             identifier = (form_data.username or "").strip()
@@ -84,7 +88,11 @@ def login_arko_admin(request: Request, response: Response, form_data: OAuth2Pass
                 max_age=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES).total_seconds()
             )
 
-            return {"token_type": "bearer", "success": True}
+            return {
+                "token_type": "bearer",
+                "access_token": access_token,
+                "success": True,
+            }
     except HTTPException:
         raise
     except Exception as e:
@@ -349,12 +357,8 @@ class GoogleLoginRequest(BaseModel):
 
 @router.post("/auth/login/google")
 @limiter.limit("10/minute")
-def login_google(request: Request, login_data: GoogleLoginRequest, response: Response):
+def login_google(request: Request, login_data: GoogleLoginRequest, response: Response) -> Dict[str, Any]:
     try:
-        from google.oauth2 import id_token
-        import google.auth.transport.requests
-        import requests
-
         if not settings.GOOGLE_CLIENT_ID:
             logger.error("GOOGLE_CLIENT_ID not configured")
             raise HTTPException(status_code=500, detail="Google OAuth no configurado")
@@ -387,8 +391,6 @@ def login_google(request: Request, login_data: GoogleLoginRequest, response: Res
             user = db.query(ArkoAdmin).filter(ArkoAdmin.email == email).first()
             if not user:
                 # Registro automático
-                import secrets
-                import string
                 alphabet = string.ascii_letters + string.digits
                 temp_pwd = ''.join(secrets.choice(alphabet) for i in range(16))
 
@@ -422,7 +424,11 @@ def login_google(request: Request, login_data: GoogleLoginRequest, response: Res
                 max_age=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES).total_seconds()
             )
 
-            return {"token_type": "bearer", "success": True}
+            return {
+                "token_type": "bearer",
+                "access_token": access_token,
+                "success": True,
+            }
     except HTTPException:
         raise
     except Exception as e:
@@ -430,7 +436,7 @@ def login_google(request: Request, login_data: GoogleLoginRequest, response: Res
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/auth/logout")
-def logout_arko_admin(response: Response):
+def logout_arko_admin(response: Response) -> Dict[str, Any]:
     """Logout endpoint - clears the httpOnly cookie"""
     response.delete_cookie(
         key="arko_admin_token",

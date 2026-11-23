@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { loginArkoAdmin, loginLandingSite, loginGoogleArkoAdmin, API_URL } from '../services/api';
 import {
   getPersistedSuperAdminUser,
+  isSuperAdminOfflineAllowed,
   isNetworkOfflineError,
   syncServiceWorkerForUser,
   disableAndPurgeOfflineMode,
@@ -16,9 +17,12 @@ function getCachedUser() {
   try {
     const raw = sessionStorage.getItem(USER_SESSION_CACHE_KEY);
     if (raw) return JSON.parse(raw);
-    return getPersistedSuperAdminUser();
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return getPersistedSuperAdminUser();
+    }
+    return null;
   } catch {
-    return getPersistedSuperAdminUser();
+    return null;
   }
 }
 
@@ -95,6 +99,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const userData = await fetchCurrentUserShared();
       if (userData) {
+        if (!isSuperAdminOfflineAllowed(userData)) {
+          localStorage.removeItem('arko_superadmin_offline_user_v1');
+          localStorage.removeItem('arko_superadmin_offline_flag_v1');
+          await disableAndPurgeOfflineMode();
+        }
         setIsAuthenticated(true);
         setUser(userData);
         setCachedUser(userData);
@@ -111,12 +120,20 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(false);
           setUser(null);
           setCachedUser(null);
-          disableAndPurgeOfflineMode();
+          localStorage.removeItem('arko_admin_token');
+          localStorage.removeItem('token');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('arko_superadmin_offline_user_v1');
+          localStorage.removeItem('arko_superadmin_offline_flag_v1');
+          await disableAndPurgeOfflineMode();
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      const offlineSuperAdmin = isNetworkOfflineError(error) ? getPersistedSuperAdminUser() : null;
+      const offlineSuperAdmin =
+        isNetworkOfflineError(error) && typeof navigator !== 'undefined' && navigator.onLine === false
+          ? getPersistedSuperAdminUser()
+          : null;
       if (offlineSuperAdmin) {
         setIsAuthenticated(true);
         setUser(offlineSuperAdmin);
@@ -124,6 +141,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         setUser(null);
         setCachedUser(null);
+        await disableAndPurgeOfflineMode();
       }
     } finally {
       setLoading(false);
@@ -146,9 +164,18 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           // Ignorar
         }
+        if (response.access_token) {
+          localStorage.setItem('arko_admin_token', response.access_token);
+          localStorage.setItem('token', response.access_token);
+        }
         // Cargar datos reales del usuario tras login exitoso
         const userData = await fetchCurrentUserShared(true);
         const finalUser = userData || { email };
+        if (!isSuperAdminOfflineAllowed(finalUser)) {
+          localStorage.removeItem('arko_superadmin_offline_user_v1');
+          localStorage.removeItem('arko_superadmin_offline_flag_v1');
+          await disableAndPurgeOfflineMode();
+        }
         setIsAuthenticated(true);
         setUser(finalUser);
         setCachedUser(finalUser);
@@ -163,8 +190,14 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      const token = localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       await fetch(`${API_URL}/arko/auth/logout`, {
         method: 'POST',
+        headers,
         credentials: 'include',
       });
     } catch (error) {
@@ -173,7 +206,12 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setUser(null);
       setCachedUser(null);
-      disableAndPurgeOfflineMode();
+      localStorage.removeItem('arko_admin_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('arko_superadmin_offline_user_v1');
+      localStorage.removeItem('arko_superadmin_offline_flag_v1');
+      await disableAndPurgeOfflineMode();
       try {
         sessionStorage.clear();
       } catch (e) {
@@ -186,8 +224,22 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await loginGoogleArkoAdmin(token);
       if (response.success || response.token_type === 'bearer') {
+        try {
+          sessionStorage.clear();
+        } catch (e) {
+          // Ignorar
+        }
+        if (response.access_token) {
+          localStorage.setItem('arko_admin_token', response.access_token);
+          localStorage.setItem('token', response.access_token);
+        }
         const userData = await fetchCurrentUserShared(true);
         const finalUser = userData || {};
+        if (!isSuperAdminOfflineAllowed(finalUser)) {
+          localStorage.removeItem('arko_superadmin_offline_user_v1');
+          localStorage.removeItem('arko_superadmin_offline_flag_v1');
+          await disableAndPurgeOfflineMode();
+        }
         setIsAuthenticated(true);
         setUser(finalUser);
         setCachedUser(finalUser);

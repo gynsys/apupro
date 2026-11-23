@@ -66,6 +66,13 @@ _CONSTRUCTION_ACTIONS: Set[str] = {
     "pintura", "pintar", "friso", "frisar", "revoque", "revocar", "encamisado", "encamisar", "empaste", "empastar",
     "acarreo", "acarrear", "bote", "botar", "transporte", "transportar", "traslado", "trasladar",
     "limpieza", "limpiar", "nivelacion", "nivelar", "compactacion", "compactar", "replanteo", "replantear",
+    "estudio", "estudios", "estudiar", "levantamiento", "levantamientos", "levantar",
+    "proyecto", "proyectos", "proyectar", "anteproyecto", "anteproyectos",
+    "ensayo", "ensayos", "ensayar", "calculo", "calculos", "calcular", "recalculo", "recalcular",
+    "diseño", "diseños", "diseñar", "evaluacion", "evaluaciones", "evaluar",
+    "inspeccion", "inspecciones", "inspeccionar", "supervision", "supervisiones", "supervisar",
+    "sondeo", "sondeos", "sondear", "calicata", "calicatas", "perforacion", "perforaciones", "perforar",
+    "medicion", "mediciones", "medir", "trazado", "trazar",
 }
 
 _CONSTRUCTION_PHYSICAL_ELEMENTS: Set[str] = {
@@ -85,6 +92,12 @@ _CONSTRUCTION_PHYSICAL_ELEMENTS: Set[str] = {
     "zanja", "zanjas", "terreno", "tierra", "roca", "talud", "escombro", "escombros", "asfalto",
     "acero", "cabilla", "cabillas", "malla", "perfil", "correa",
     "baño", "cocina", "sala", "fachada", "cuarto",
+    "suelo", "suelos", "geotecnia", "geotecnico", "geotecnica",
+    "topografia", "topografico", "topografica", "plano", "planos",
+    "anteproyecto", "anteproyectos", "memoria", "estratigrafia",
+    "poligonal", "resistividad", "spt", "proctor", "ambiente", "ambiental",
+    "vialidad", "vial", "edificacion", "edificaciones", "vivienda", "viviendas",
+    "galpon", "galpones", "tanquilla", "tanquillas", "torre", "torres",
 }
 
 # Carga dinámica del léxico compilado desde las 17,408 partidas COVENIN de la base de datos

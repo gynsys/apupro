@@ -28,26 +28,25 @@ export function isSuperAdminOfflineAllowed(user) {
 export function isDeviceOfflineModeActive() {
   if (typeof window === 'undefined' || !window.localStorage) return false;
   try {
-    if (window.localStorage.getItem(SUPERADMIN_OFFLINE_FLAG_KEY) === '1') {
-      return true;
+    // Si hay una sesión activa en sessionStorage de un usuario no-superadmin, el modo offline está desactivado
+    if (window.sessionStorage) {
+      const rawSession = window.sessionStorage.getItem('arko_cached_user_v1');
+      if (rawSession) {
+        const sessionUser = JSON.parse(rawSession);
+        if (!isSuperAdminOfflineAllowed(sessionUser)) {
+          window.localStorage.removeItem(SUPERADMIN_USER_STORAGE_KEY);
+          window.localStorage.removeItem(SUPERADMIN_OFFLINE_FLAG_KEY);
+          return false;
+        }
+        window.localStorage.setItem(SUPERADMIN_OFFLINE_FLAG_KEY, '1');
+        return true;
+      }
     }
     const rawPersisted = window.localStorage.getItem(SUPERADMIN_USER_STORAGE_KEY);
     if (rawPersisted) {
       const parsed = JSON.parse(rawPersisted);
       if (isSuperAdminOfflineAllowed(parsed)) {
-        window.localStorage.setItem(SUPERADMIN_OFFLINE_FLAG_KEY, '1');
-        return true;
-      }
-    }
-    if (window.sessionStorage) {
-      const rawSession = window.sessionStorage.getItem('arko_cached_user_v1');
-      if (rawSession) {
-        const sessionUser = JSON.parse(rawSession);
-        if (isSuperAdminOfflineAllowed(sessionUser)) {
-          window.localStorage.setItem(SUPERADMIN_USER_STORAGE_KEY, JSON.stringify(sessionUser));
-          window.localStorage.setItem(SUPERADMIN_OFFLINE_FLAG_KEY, '1');
-          return true;
-        }
+        return window.localStorage.getItem(SUPERADMIN_OFFLINE_FLAG_KEY) === '1';
       }
     }
     return false;

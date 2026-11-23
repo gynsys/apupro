@@ -32,6 +32,7 @@ export function getActionPipeline(accion) {
   if (/confecc/i.test(clean)) return ACTION_FLOW_PIPELINES['confeccion'];
   if (/tratam/i.test(clean)) return ACTION_FLOW_PIPELINES['tratamiento'];
   if (/construc/i.test(clean)) return ACTION_FLOW_PIPELINES['construccion'];
+  if (/estudio|proyecto|levantam|geotecn|topograf|ensayo|calicata|sondeo|anteproyecto/i.test(clean)) return ACTION_FLOW_PIPELINES['estudio'];
 
   return DEFAULT_PIPELINE;
 }

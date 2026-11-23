@@ -72,6 +72,10 @@ _REGLAS_COVENIN = """
      * Instalaciones Eléctricas: 'E611'
      * Estructuras de Concreto: 'E313'
      * Estructuras Metálicas: 'E321'
+     * Estudios Preliminares / Suelos / Geotecnia / Impacto Ambiental: 'E011'
+     * Levantamientos Topográficos: 'E012'
+     * Anteproyectos: 'E014'
+     * Proyectos de Arquitectura / Estructuras / Instalaciones: 'E015'
      Si se proporciona `covenin_prefix`, úsalo como raíz eliminando ceros sobrantes.
    - Seguido de 'SC' (Partida Especial / Sin Código).
    - Seguido de un correlativo de tres dígitos '001'.

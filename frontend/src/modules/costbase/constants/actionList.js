@@ -1,4 +1,4 @@
-// Los 23 chips de acción constructiva (extraídos de actionPipelines.js)
+// Los 24 chips de acción constructiva (extraídos de actionPipelines.js)
 export const ACCIONES_STEP1_CHIPS = [
   'Suministro e instalación',
   'Instalación',
@@ -22,5 +22,6 @@ export const ACCIONES_STEP1_CHIPS = [
   'Tratamiento',
   'Impermeabilización',
   'Desmontaje',
-  'Limpieza'
+  'Limpieza',
+  'Estudios y proyectos'
 ];

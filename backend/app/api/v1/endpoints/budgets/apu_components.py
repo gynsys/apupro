@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.arko import get_current_arko_admin
+from app.api.v1.endpoints.budgets.helpers import get_budget_or_404
 from app.db.base import get_db
 from app.db.models.arko import ArkoAdmin
 from app.db.models.budget import (
@@ -34,12 +35,7 @@ router = APIRouter()
 def _owned_item_or_404(
     db: Session, budget_id: str, item_id: str, current_user: ArkoAdmin
 ) -> BudgetItem:
-    budget = db.query(Budget).filter(
-        Budget.id == budget_id,
-        Budget.user_id == str(current_user.id),
-    ).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
     item = db.query(BudgetItem).filter(
         BudgetItem.id == item_id,
         BudgetItem.budget_id == budget_id,

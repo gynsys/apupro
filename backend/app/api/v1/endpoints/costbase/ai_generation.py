@@ -301,6 +301,8 @@ _ACTION_TOKENS = (
     "encofrado", "encofrar", "armado", "armar", "remocion", "remover",
     "transporte", "transportar", "reemplazo", "reemplazar", "deforestacion",
     "desmalezamiento", "tala",
+    "estudio", "estudios", "proyecto", "proyectos", "levantamiento", "ensayo", "ensayos",
+    "geotecnia", "topografia", "calculo", "diseño", "anteproyecto", "sondeo",
 )
 
 _CLARIFICATION_ANSWER_RE = re.compile(

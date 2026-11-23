@@ -139,13 +139,28 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
         equipment_inflation: toNum(settings.equipment_inflation, 0.0),
       };
 
-      const updated = await budgetService.update(budget.id, payload);
-      localStorage.setItem(`budget_ubicacion_${budget.id}`, payload.ubicacion);
+      let updated = null;
+      if (budget?.id === 'example-demo' || budget?.is_demo) {
+        updated = { ...budget, ...payload };
+        try {
+          const cachedDemo = sessionStorage.getItem('kosto_guest_example_demo');
+          if (cachedDemo) {
+            const parsed = JSON.parse(cachedDemo);
+            sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify({ ...parsed, ...payload }));
+          }
+        } catch (_) {}
+      } else {
+        updated = await budgetService.update(budget.id, payload);
+      }
+
+      try {
+        localStorage.setItem(`budget_ubicacion_${budget.id}`, payload.ubicacion);
+      } catch (_) {}
+
       toast.success('Configuración guardada exitosamente');
       if (typeof onSave === 'function') {
         onSave(updated || { ...budget, ...payload });
-      }
-      if (typeof onClose === 'function') {
+      } else if (typeof onClose === 'function') {
         onClose();
       }
     } catch (error) {
@@ -158,7 +173,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
-      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-[550px] bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full h-full sm:h-auto sm:max-h-[92dvh] sm:max-w-2xl bg-amber-100 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden font-sans flex flex-col animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center px-4 sm:px-6 py-3.5 sm:py-4 pt-safe bg-white/40 border-b border-amber-600/15 shrink-0">
           <h2 className="m-0 text-lg sm:text-xl font-bold text-amber-900 flex items-center gap-2">
             <Settings className="text-sky-600 shrink-0" size={20} /> <span className="truncate">Configuración del Presupuesto</span>
@@ -188,7 +203,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
           </button>
         </div>
 
-        <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-4">
+        <div className="px-4 sm:px-6 py-4 flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-4">
           {configTab === 'general' ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2 w-full">
@@ -279,7 +294,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
           ) : (
             <div className="flex flex-col gap-6">
               {/* Row 1: Moneda, Tasa, FCAS */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                     <DollarSign size={14}/> Moneda Base
@@ -304,13 +319,13 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-1">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-0.5">
                     <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
                       <Percent size={14}/> FCAS Global (%)
                     </label>
                     {costosConfig?.fcasSavedProfiles && Object.keys(costosConfig.fcasSavedProfiles).length > 0 && (
                       <select 
-                        className="text-[11px] bg-sky-50 text-sky-800 border border-sky-200 rounded-md px-1.5 py-0.5 outline-none hover:bg-sky-100 transition-colors cursor-pointer max-w-[130px] truncate"
+                        className="text-[11px] bg-sky-50 text-sky-800 border border-sky-200 rounded-md px-1.5 py-0.5 outline-none hover:bg-sky-100 transition-colors cursor-pointer max-w-[125px] truncate"
                         onChange={(e) => {
                           if (e.target.value) {
                             const p = costosConfig.fcasSavedProfiles[e.target.value];
@@ -360,7 +375,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
               </div>
               
               {/* Row 2: Inflación Materiales, Equipos, Mano de Obra, Bono */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1 whitespace-nowrap">
                     <Percent size={14}/> Inf. Mat.
@@ -409,7 +424,7 @@ export default function BudgetSettingsModal({ budget, onClose, onSave }) {
               </div>
 
               {/* Row 3: Admin, Utilidad, IVA */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-semibold text-amber-900 flex items-center gap-1">
                     <Percent size={14}/> Admin.

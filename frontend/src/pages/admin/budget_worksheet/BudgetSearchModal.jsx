@@ -34,13 +34,21 @@ export default function BudgetSearchModal({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [addingCode, setAddingCode] = useState(null);
+  const [addedCodes, setAddedCodes] = useState(() => new Set());
 
   const handleIncludeClick = async (item) => {
     if (addingCode) return;
-    const itemKey = item.CodPar || item.id || item.codigo;
+    const itemKey = item.CodPar || item.id || item.codigo || item.CovPar;
     setAddingCode(itemKey);
     try {
-      await onAddItem(item);
+      await onAddItem(item, { keepModalOpen: true });
+      setAddedCodes(prev => {
+        const next = new Set(prev);
+        if (itemKey) next.add(String(itemKey));
+        if (item.CodPar) next.add(String(item.CodPar));
+        if (item.CovPar) next.add(String(item.CovPar));
+        return next;
+      });
     } catch (e) {
       console.error('Error adding item:', e);
     } finally {
@@ -335,48 +343,69 @@ export default function BudgetSearchModal({
             </div>
           ) : (
             <div className="space-y-2.5 sm:space-y-3">
-              {searchResults.map(item => (
-                <div 
-                  key={item.CodPar}
-                  className="bg-white/80 border border-amber-600/10 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row gap-2.5 sm:gap-4 hover:border-sky-300 hover:shadow-md transition-all items-start sm:items-center justify-between"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
-                        {item.CovPar || item.CodPar}
-                      </span>
-                      <span className="text-[11px] font-semibold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">
-                        UND: {item.UniPar}
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-[13px] text-amber-950 line-clamp-2 leading-relaxed m-0">
-                      {item.Descri}
-                    </p>
-                  </div>
-                  <button 
-                    disabled={Boolean(addingCode)}
-                    onClick={() => handleIncludeClick(item)}
-                    className={`w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 border px-4 py-2 sm:py-1.5 rounded-lg font-semibold transition-colors text-xs active:scale-95 cursor-pointer ${
-                      addingCode === (item.CodPar || item.id || item.codigo)
-                        ? 'bg-sky-100 text-sky-800 border-sky-300 cursor-wait'
-                        : addingCode
-                          ? 'opacity-50 cursor-not-allowed bg-transparent border-slate-200 text-slate-400'
-                          : 'bg-transparent border-sky-200 hover:border-sky-500 hover:bg-sky-50 text-sky-700'
-                    }`}
+              {searchResults.map(item => {
+                const itemKey = item.CodPar || item.id || item.codigo || item.CovPar;
+                const isAddingThis = addingCode === itemKey;
+                const isAlreadyAdded = (
+                  addedCodes.has(String(itemKey)) ||
+                  (item.CodPar && addedCodes.has(String(item.CodPar))) ||
+                  (item.CovPar && addedCodes.has(String(item.CovPar))) ||
+                  (item.id && addedCodes.has(String(item.id))) ||
+                  (item.codigo && addedCodes.has(String(item.codigo)))
+                );
+
+                return (
+                  <div 
+                    key={item.CodPar || itemKey}
+                    className="bg-white/80 border border-amber-600/10 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row gap-2.5 sm:gap-4 hover:border-sky-300 hover:shadow-md transition-all items-start sm:items-center justify-between"
                   >
-                    {addingCode === (item.CodPar || item.id || item.codigo) ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin text-sky-600" />
-                        <span>Incluyendo...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={14} /> Incluir
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                          {item.CovPar || item.CodPar}
+                        </span>
+                        <span className="text-[11px] font-semibold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">
+                          UND: {item.UniPar}
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-[13px] text-amber-950 line-clamp-2 leading-relaxed m-0">
+                        {item.Descri}
+                      </p>
+                    </div>
+                    <button 
+                      type="button"
+                      disabled={Boolean(addingCode)}
+                      onClick={() => handleIncludeClick(item)}
+                      className={`w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 border px-4 py-2 sm:py-1.5 rounded-lg font-semibold transition-colors text-xs active:scale-95 cursor-pointer ${
+                        isAddingThis
+                          ? 'bg-sky-100 text-sky-800 border-sky-300 cursor-wait'
+                          : addingCode
+                            ? 'opacity-50 cursor-not-allowed bg-transparent border-slate-200 text-slate-400'
+                            : isAlreadyAdded
+                              ? 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100 text-emerald-800'
+                              : 'bg-transparent border-sky-200 hover:border-sky-500 hover:bg-sky-50 text-sky-700'
+                      }`}
+                      title={isAlreadyAdded ? 'Partida incluida en el presupuesto. Clic para volver a incluir.' : 'Incluir partida en el presupuesto'}
+                    >
+                      {isAddingThis ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin text-sky-600" />
+                          <span>Incluyendo...</span>
+                        </>
+                      ) : isAlreadyAdded ? (
+                        <>
+                          <Check size={14} className="text-emerald-600" />
+                          <span>✓ Incluida</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={14} /> Incluir
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           

@@ -163,7 +163,10 @@ export default function BudgetHomePage() {
   };
 
   useEffect(() => {
-    loadBudgets(Boolean(initialCached));
+    const userCache = getCachedBudgets(currentUserId);
+    setBudgets(userCache || []);
+    setBudgetTotals(buildTotalsMap(userCache || []));
+    loadBudgets(Boolean(userCache));
   }, [currentUserId, isAuthenticated]);
 
   // Un presupuesto compartido por otro usuario aparece sin refrescar la página, sin parpadeo de spinner.

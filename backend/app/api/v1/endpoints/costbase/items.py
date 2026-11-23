@@ -11,7 +11,7 @@ from app.db.base import get_db
 from app.api.v1.endpoints.arko import get_current_arko_admin, get_optional_arko_admin
 from app.db.models.arko import ArkoAdmin
 from app.db.models.costbase import CustomCostItem
-from app.db.models.budget import BudgetItem
+from app.db.models.budget import Budget, BudgetItem
 from app.schemas.costbase import (
     CostItemListResponse,
     APUResponse,
@@ -20,6 +20,7 @@ from app.schemas.costbase import (
     MasterAPUUpdate
 )
 from app.crud.crud_costbase import (
+    normalize_covenin_code,
     get_items_paginated,
     get_item_by_code,
     get_item_by_code_or_covpar,
@@ -296,6 +297,21 @@ def get_items(
 ) -> Dict[str, Any]:
     if database_id.startswith("budget_"):
         budget_id = database_id.replace("budget_", "")
+        budget = db.query(Budget).filter(Budget.id == budget_id).first()
+        if not budget:
+            raise HTTPException(status_code=404, detail="Presupuesto no encontrado")
+
+        is_owner = current_user and str(budget.user_id) == str(current_user.id)
+        is_super = current_user and (
+            getattr(current_user, "is_superadmin", False) or
+            getattr(current_user, "email", "") == "admin@arko360.net" or
+            getattr(current_user, "role", "") in ["admin", "superadmin"]
+        )
+        is_public = getattr(budget, "is_public_share", False)
+
+        if not (is_owner or is_super or is_public):
+            raise HTTPException(status_code=403, detail="No tienes permiso para ver este presupuesto")
+
         query = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id, BudgetItem.is_chapter == False)
 
         if search:
@@ -350,7 +366,18 @@ def get_apu(
 ) -> Any:
     if database_id.startswith("budget_"):
         budget_id = database_id.replace("budget_", "")
-        bi = db.query(BudgetItem).filter(BudgetItem.budget_id == budget_id, BudgetItem.cod_par == item_code).first()
+        clean_code = urllib.parse.unquote(item_code).strip()
+        clean_norm = normalize_covenin_code(clean_code) if clean_code else ""
+        bi = db.query(BudgetItem).filter(
+            BudgetItem.budget_id == budget_id,
+            or_(
+                BudgetItem.cod_par == clean_code,
+                BudgetItem.cov_par == clean_code,
+                BudgetItem.id == clean_code,
+                func.replace(BudgetItem.cod_par, '.', '') == clean_norm,
+                func.replace(BudgetItem.cov_par, '.', '') == clean_norm,
+            )
+        ).first()
         if not bi:
             raise HTTPException(status_code=404, detail="Partida de presupuesto no encontrada")
 

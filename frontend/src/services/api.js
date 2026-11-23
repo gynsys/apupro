@@ -3,13 +3,20 @@ const CONTACT_ENDPOINT = import.meta.env.VITE_CONTACT_ENDPOINT || '/arko360/cont
 
 // Helper function to include credentials in all requests
 const fetchWithCredentials = (url, options = {}) => {
+  const token = typeof localStorage !== 'undefined'
+    ? (localStorage.getItem('arko_admin_token') || localStorage.getItem('token') || localStorage.getItem('access_token'))
+    : null;
+  const headers = {
+    ...options.headers,
+    'Content-Type': options.headers?.['Content-Type'] || 'application/json',
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   return fetch(url, {
     ...options,
     credentials: 'include', // Include httpOnly cookies
-    headers: {
-      ...options.headers,
-      'Content-Type': options.headers?.['Content-Type'] || 'application/json',
-    }
+    headers,
   });
 };
 

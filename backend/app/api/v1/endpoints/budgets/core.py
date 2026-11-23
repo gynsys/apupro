@@ -27,6 +27,7 @@ from app.schemas.budget import (
     BudgetUpdate,
 )
 from .helpers import (
+    get_budget_or_404,
     compute_budget_summary_metrics,
     ensure_budget_performance_indexes,
     ensure_budget_share_columns,
@@ -141,19 +142,7 @@ def get_budget(
 ) -> Budget:
     """Obtiene un presupuesto por ID con carga eager indexada si pertenece al usuario autenticado."""
     ensure_budget_performance_indexes(db)
-    budget = (
-        db.query(Budget)
-        .options(
-            selectinload(Budget.items).selectinload(BudgetItem.materials),
-            selectinload(Budget.items).selectinload(BudgetItem.equipments),
-            selectinload(Budget.items).selectinload(BudgetItem.labors),
-        )
-        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
-        .first()
-    )
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
-    return budget
+    return get_budget_or_404(db, budget_id, current_user, for_write=False, eager_load_items=True)
 
 
 @router.put("/{budget_id}", response_model=BudgetSchema)
@@ -164,18 +153,7 @@ def update_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Budget:
     """Actualiza la configuracion y cabecera de un presupuesto."""
-    budget = (
-        db.query(Budget)
-        .options(
-            selectinload(Budget.items).selectinload(BudgetItem.materials),
-            selectinload(Budget.items).selectinload(BudgetItem.equipments),
-            selectinload(Budget.items).selectinload(BudgetItem.labors),
-        )
-        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
-        .first()
-    )
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=True, eager_load_items=False)
 
     update_data = budget_in.model_dump(exclude_unset=True)
     if "project_name" in update_data and "name" not in update_data:
@@ -187,8 +165,7 @@ def update_budget(
         setattr(budget, field, value)
 
     db.commit()
-    db.refresh(budget)
-    return budget
+    return get_budget_or_404(db, budget_id, current_user, for_write=True, eager_load_items=True)
 
 
 @router.delete("/{budget_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -198,12 +175,7 @@ def delete_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> None:
     """Elimina un presupuesto y todos sus items (cascade)."""
-    budget = db.query(Budget).filter(
-        Budget.id == budget_id,
-        Budget.user_id == str(current_user.id),
-    ).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=True)
     db.delete(budget)
     db.commit()
 
@@ -216,18 +188,7 @@ def duplicate_budget(
     current_user: ArkoAdmin = Depends(get_current_arko_admin),
 ) -> Budget:
     """Duplica un presupuesto existente junto con todas sus partidas e insumos."""
-    budget = (
-        db.query(Budget)
-        .options(
-            selectinload(Budget.items).selectinload(BudgetItem.materials),
-            selectinload(Budget.items).selectinload(BudgetItem.equipments),
-            selectinload(Budget.items).selectinload(BudgetItem.labors),
-        )
-        .filter(Budget.id == budget_id, Budget.user_id == str(current_user.id))
-        .first()
-    )
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
+    budget = get_budget_or_404(db, budget_id, current_user, for_write=False, eager_load_items=True)
 
     # 1. Duplicar Budget
     new_budget = Budget(

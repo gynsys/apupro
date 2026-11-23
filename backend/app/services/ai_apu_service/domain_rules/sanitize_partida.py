@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from typing import Any, Dict
 from app.services.ai_apu_service.domain_rules.discordant_pruning import (
     is_pipe_or_conduit_activity,
@@ -74,16 +75,37 @@ def infer_covenin_prefix(description: str, base_code: str = "") -> str:
     if not description or not isinstance(description, str):
         return "E411"
 
-    d = description.upper()
+    d_raw = description.upper()
+    d_norm = unicodedata.normalize('NFKD', d_raw).encode('ASCII', 'ignore').decode('utf-8')
+    d = f"{d_raw} {d_norm}"
 
-    # 0. Demoliciones, Desmontes y Remociones (E211) - Máxima prioridad sobre materiales soporte
+    # 0. Estudios y Proyectos (E0 - Estudios Preliminares, Topografía, Geotecnia, Anteproyectos y Proyectos)
+    if any(k in d for k in [
+        "LEVANTAMIENTO TOPOGRAFICO", "TOPOGRAFIA", "TOPOGRAFICO", "POLIGONAL", "CURVAS DE NIVEL", "PLANIALTIMETRI"
+    ]):
+        return "E012"
+    if any(k in d for k in ["ANTEPROYECTO", "ANTEPROYECTOS"]):
+        return "E014"
+    if any(k in d for k in [
+        "PROYECTO DE ARQUITECTURA", "PROYECTO DE ESTRUCTURA", "CALCULO ESTRUCTURAL", "RECALCULO ESTRUCTURAL",
+        "PROYECTO DE INSTALACIONES", "MEMORIA DESCRIPTIVA", "DISEÑO ESTRUCTURAL", "PROYECTO ELECTRICO", "PROYECTO SANITARIO"
+    ]):
+        return "E015"
+    if any(k in d for k in [
+        "ESTUDIO", "ESTUDIOS", "ESTUDIO DE SUELO", "ESTUDIOS DE SUELO", "MECANICA DE SUELOS", "GEOTECNIA", "GEOTECNICO",
+        "ENSAYO SPT", "PENETRACION ESTANDAR", "CALICATA", "SONDEO", "RESISTIVIDAD DEL SUELO",
+        "ESTUDIO DE CARGA", "IMPACTO AMBIENTAL", "ESTUDIOS PRELIMINARES", "EVALUACION DE VERTICALIDAD"
+    ]):
+        return "E011"
+
+    # 1. Demoliciones, Desmontes y Remociones (E211) - Máxima prioridad sobre materiales soporte
     if any(k in d for k in [
         "DEMOLICION", "DEMOLER", "REMOCION", "REMOVER", "DESMONTE", "DESMONTAR",
         "RETIRO", "RETIRAR", "DESMANTELAMIENTO", "DESMANTELAR", "PICADO", "DESINSTALACION"
     ]):
         return "E211"
 
-    # 1. Pinturas y Acabados Especiales (E46)
+    # 2. Pinturas y Acabados Especiales (E46)
     if any(k in d for k in ["EPOXI", "POLIURETANO", "TRAFICO", "MICROESFERA"]):
         return "E465"  # Pinturas especiales / epóxicas
     if any(k in d for k in ["ESMALTE", "ALQUIDIC", "ANTICORROSIV"]):

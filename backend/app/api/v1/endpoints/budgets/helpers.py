@@ -5,8 +5,9 @@ import json
 import math
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from sqlalchemy import text, or_
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.logging import logger
 from app.db.models.backup_logs import BackupLog
@@ -19,6 +20,54 @@ from app.db.models.budget import (
 )
 
 _BUDGET_INDEXES_ENSURED: bool = False
+
+
+def check_is_superadmin(user: Any) -> bool:
+    """Verifica si el usuario tiene privilegios de superadministrador."""
+    if not user:
+        return False
+    return (
+        getattr(user, "is_superadmin", False) is True
+        or getattr(user, "email", "") == "admin@arko360.net"
+        or getattr(user, "role", "") in ["admin", "superadmin"]
+        or getattr(user, "plan", "") in ["enterprise", "admin", "unlimited"]
+    )
+
+
+def get_budget_or_404(
+    db: Session,
+    budget_id: str,
+    current_user: Any,
+    for_write: bool = False,
+    eager_load_items: bool = False,
+) -> Budget:
+    """Busca un presupuesto validando permisos de propietario, superadmin o compartido público."""
+    is_super = check_is_superadmin(current_user)
+    user_id_str = str(current_user.id) if current_user and hasattr(current_user, "id") else None
+
+    query = db.query(Budget)
+    if eager_load_items:
+        query = query.options(
+            selectinload(Budget.items).selectinload(BudgetItem.materials),
+            selectinload(Budget.items).selectinload(BudgetItem.equipments),
+            selectinload(Budget.items).selectinload(BudgetItem.labors),
+        )
+
+    if not is_super:
+        if for_write:
+            query = query.filter(Budget.user_id == user_id_str)
+        else:
+            query = query.filter(
+                or_(
+                    Budget.user_id == user_id_str,
+                    Budget.is_public_share == True,
+                )
+            )
+
+    budget = query.filter(Budget.id == budget_id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return budget
 
 
 def _round_half_up_2(val: float) -> float:

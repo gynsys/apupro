@@ -101,9 +101,9 @@ export function useBudgetWorksheet() {
     });
   };
 
-  const loadBudget = async () => {
+  const loadBudget = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       let data = null;
       if (isGuestDemo) {
         try {
@@ -174,9 +174,9 @@ export function useBudgetWorksheet() {
     } catch (error) {
       console.error(error);
       toast.error('Error cargando el presupuesto');
-      navigate('/budgets');
+      if (!silent) navigate('/budgets');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -269,17 +269,17 @@ export function useBudgetWorksheet() {
     setShowSearchModal(true);
   };
 
-  const handleAddItem = async (item) => {
+  const handleAddItem = async (item, { keepModalOpen = false } = {}) => {
     try {
       let targetOrder = 0;
       if (selectedItemId && budget?.items) {
-        const selected = budget.items.find(i => i.id === selectedItemId);
+        const selected = budget.items.find(i => String(i.id) === String(selectedItemId));
         if (selected) targetOrder = selected.order + 1;
       }
 
       let materials = [], equipments = [], labors = [];
       try {
-        const apuCode = item.id || item.CodPar || item.codigo;
+        const apuCode = item.CodPar || item.id || item.codigo || item.CovPar;
         const dbId = activeDatabase?.id || 'master';
         const apuData = await costbaseService.fetchApuDetails(apuCode, dbId);
         if (apuData) {
@@ -344,7 +344,7 @@ export function useBudgetWorksheet() {
           if (!prev) return prev;
           const prevItems = Array.isArray(prev.items) ? [...prev.items] : [];
           if (targetOrder > 0) {
-            const insertIdx = prevItems.findIndex((i) => i.id === selectedItemId);
+            const insertIdx = prevItems.findIndex((i) => String(i.id) === String(selectedItemId));
             if (insertIdx >= 0) {
               prevItems.splice(insertIdx + 1, 0, localItem);
             } else {
@@ -353,17 +353,25 @@ export function useBudgetWorksheet() {
           } else {
             prevItems.push(localItem);
           }
-          return { ...prev, items: prevItems };
+          const updated = { ...prev, items: prevItems };
+          try {
+            sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
         });
-        setShowSearchModal(false);
-        toast.success('Partida incluida en el presupuesto de ejemplo');
+        if (!keepModalOpen) {
+          setShowSearchModal(false);
+        }
+        toast.success('Partida incluida en el presupuesto');
         notifyGuestDemoSave();
         return;
       }
 
       await budgetService.addItem(id, newItemPayload);
-      setShowSearchModal(false);
-      loadBudget();
+      if (!keepModalOpen) {
+        setShowSearchModal(false);
+      }
+      await loadBudget(true);
       toast.success(
         activeDatabase?.is_master
           ? 'Partida agregada al presupuesto'
@@ -376,6 +384,7 @@ export function useBudgetWorksheet() {
       } else {
         toast.error(error.message || 'Error agregando partida');
       }
+      throw error;
     }
   };
 
@@ -436,7 +445,7 @@ export function useBudgetWorksheet() {
         labors
       });
 
-      await loadBudget();
+      await loadBudget(true);
       toast.success('Partida generada con IA agregada exitosamente al presupuesto');
     } catch (err) {
       console.error('Error insertando APU de IA al presupuesto:', err);
@@ -451,7 +460,7 @@ export function useBudgetWorksheet() {
     try {
       let targetOrder = 0;
       if (selectedItemId && budget?.items) {
-        const selected = budget.items.find(i => i.id === selectedItemId);
+        const selected = budget.items.find(i => String(i.id) === String(selectedItemId));
         if (selected) targetOrder = selected.order + 1;
       }
       
@@ -475,7 +484,15 @@ export function useBudgetWorksheet() {
           equipments: [],
           labors: [],
         };
-        setBudget(prev => prev ? { ...prev, items: [...(prev.items || []), localCap] } : prev);
+        setBudget(prev => {
+          if (!prev) return prev;
+          const nextItems = [...(prev.items || []), localCap];
+          const updated = { ...prev, items: nextItems };
+          try {
+            sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify(updated));
+          } catch (_) {}
+          return updated;
+        });
         setShowChapterModal(false);
         setChapterName("");
         toast.success('Capítulo agregado');
@@ -485,7 +502,7 @@ export function useBudgetWorksheet() {
       await budgetService.addItem(id, chapterPayload);
       setShowChapterModal(false);
       setChapterName("");
-      loadBudget();
+      await loadBudget(true);
       toast.success('Capítulo agregado');
     } catch (error) {
       toast.error('Error agregando capítulo');
@@ -493,7 +510,7 @@ export function useBudgetWorksheet() {
   };
 
   const handleDeleteItem = async (itemId) => {
-    setItemToDelete(budget.items.find(i => i.id === itemId));
+    setItemToDelete(budget?.items?.find(i => String(i.id) === String(itemId)) || null);
   };
 
   const confirmDelete = async () => {
@@ -501,28 +518,33 @@ export function useBudgetWorksheet() {
     setIsDeleting(true);
     try {
       if (isGuestDemo) {
-        if (selectedItemId === itemToDelete.id) {
+        if (selectedItemId && String(selectedItemId) === String(itemToDelete.id)) {
           setSelectedItemId(null);
         }
-        setBudget(prev => ({
-          ...prev,
-          items: (prev.items || []).filter(i => i.id !== itemToDelete.id)
-        }));
+        setBudget(prev => {
+          if (!prev) return prev;
+          const nextItems = (prev.items || []).filter(i => String(i.id) !== String(itemToDelete.id));
+          const updatedBudget = { ...prev, items: nextItems };
+          try {
+            sessionStorage.setItem('kosto_guest_example_demo', JSON.stringify(updatedBudget));
+          } catch (_) {}
+          return updatedBudget;
+        });
         setItemToDelete(null);
-        toast.success('Eliminada correctamente');
+        toast.success(itemToDelete.is_chapter ? 'Capítulo eliminado' : 'Partida eliminada');
         return;
       }
       await budgetService.deleteItem(id, itemToDelete.id);
-      if (selectedItemId === itemToDelete.id) {
+      if (selectedItemId && String(selectedItemId) === String(itemToDelete.id)) {
         setSelectedItemId(null);
       }
       setBudget(prev => ({
         ...prev,
-        items: (prev.items || []).filter(i => i.id !== itemToDelete.id)
+        items: (prev.items || []).filter(i => String(i.id) !== String(itemToDelete.id))
       }));
       setItemToDelete(null);
-      toast.success('Eliminada correctamente');
-      loadBudget();
+      toast.success(itemToDelete.is_chapter ? 'Capítulo eliminado' : 'Partida eliminada');
+      await loadBudget(true);
     } catch (error) {
       console.error('Error eliminando la fila:', error);
       toast.error('Error eliminando la fila');
@@ -572,7 +594,7 @@ export function useBudgetWorksheet() {
       await budgetService.reorderItems(id, itemIds);
     } catch (error) {
       toast.error('Error reordenando las partidas');
-      loadBudget();
+      loadBudget(true);
     }
   };
 
@@ -593,7 +615,7 @@ export function useBudgetWorksheet() {
       await budgetService.reorderItems(id, itemIds);
     } catch (error) {
       toast.error('Error al mover la partida');
-      loadBudget();
+      loadBudget(true);
     }
   };
 
@@ -788,7 +810,7 @@ export function useBudgetWorksheet() {
       setRecalibratingPerformances(true);
       toast.loading('Recalibrando rendimientos con normas COVENIN y cuadrillas...', { id: 'recalibrate-perf' });
       const res = await budgetService.recalibratePerformances(budget.id);
-      await loadBudget();
+      await loadBudget(true);
       toast.success(
         res.message || `Rendimientos recalibrados exitosamente (${res.updated_items || 0} partidas actualizadas)`,
         { id: 'recalibrate-perf' }

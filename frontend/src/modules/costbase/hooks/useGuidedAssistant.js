@@ -25,7 +25,8 @@ export const CONSTRUCTION_ACTION_ROOTS = [
   'desmalez', 'deshierb', 'deforest', 'remoc', 'remov', 'trazo', 'replant', 'nivel', 'perfil', 'rellen', 'compact',
   'soldad', 'soldar', 'oxicort', 'cort', 'perfor', 'canaliz', 'cablead', 'cablear',
   'conexion', 'empalm', 'prueb', 'impermeabiliz', 'aislam',
-  'confecc', 'tratam'
+  'confecc', 'tratam',
+  'estudi', 'proyect', 'levantam', 'ensay', 'geotec', 'topograf', 'calcul', 'sondeo', 'calicat'
 ];
 
 // Raíces de elementos o materiales constructivos
@@ -37,7 +38,8 @@ export const ELEMENT_ROOTS = [
   'aire', 'tanque', 'valvula', 'puerta', 'ventana', 'reja', 'porton', 'descanso',
   'techo', 'cielorraso', 'cubierta', 'mortero', 'friso', 'escombro', 'tierra', 'zanja',
   'armadura', 'cabilla', 'acometida', 'breake', 'drenaje', 'alcantarill', 'estructura',
-  'terraplen', 'subbase', 'base', 'vegetac', 'arbol', 'bosque', 'capote', 'descapote'
+  'terraplen', 'subbase', 'base', 'vegetac', 'arbol', 'bosque', 'capote', 'descapote',
+  'suelo', 'geotecnia', 'topografia', 'plano', 'informe', 'anteproyecto'
 ];
 
 /**
