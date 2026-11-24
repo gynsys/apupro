@@ -81,7 +81,7 @@ export default function ComputosTable({
                       <th colSpan={4} className="border border-gray-400 px-2 py-1 bg-amber-300">
                         DIMENSIONES
                       </th>
-                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-200" title="Número de repeticiones o piezas iguales">
+                      <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-14 bg-amber-200" title="Número de repeticiones o piezas (admite decimales)">
                         N° DE VECES
                       </th>
                       <th rowSpan={2} className="border border-gray-400 px-2 py-2 w-16 bg-amber-300 text-amber-950" title="Factor de peso unitario para acero (kg/m) o factor multiplicador">

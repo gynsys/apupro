@@ -168,7 +168,7 @@ function computePartial(p, parentUnit = '') {
       const parcial = round2(rawBase * multFactor * effectiveDist * t);
       p.partial = parcial;
       p.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
-      if (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0)) {
+      if (p.geometryType !== GEOMETRY_TYPES.DOOR_FRAME && (normUnit === 'M3' || (!normUnit && geomResult.baseGeom > 0))) {
         p.m3 = parcial;
         p._autoM3 = parcial;
       }
@@ -368,7 +368,7 @@ function recomputeRow(row, field, value) {
       updated.formula = t !== 1 ? `${t} × [${geomResult.formulaStr}]` : geomResult.formulaStr;
       updated._ownQuantity = total;
       updated._ownFormula = updated.formula;
-      if (updated.unit === 'M3') {
+      if (updated.unit === 'M3' && updated.geometryType !== GEOMETRY_TYPES.DOOR_FRAME) {
         updated.m3 = total;
         updated._autoM3 = total;
       }

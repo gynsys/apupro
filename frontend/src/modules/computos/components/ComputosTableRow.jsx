@@ -343,6 +343,8 @@ function ComputosTableRow({
                             <td className="border border-gray-300 px-1 py-1">
                               {hasPartials ? (
                                 <span className="block text-center text-xs text-gray-400 font-bold select-none" title="Desglosado en parciales">—</span>
+                              ) : it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? (
+                                <span className="block text-center text-xs text-gray-400 font-bold select-none" title="No aplica para marcos (usar Ancho y Alto)">—</span>
                               ) : (
                                 <MathQuantityInput
                                   value={it.length ?? ''}
@@ -404,6 +406,7 @@ function ComputosTableRow({
                                   onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
                                   allowEmpty
                                   placeholder={
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho m' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
@@ -412,6 +415,7 @@ function ComputosTableRow({
                                   }
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title={
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho del marco (vano horizontal) en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Altura del triángulo en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B del triángulo en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Menor del trapecio en metros (b)' :
@@ -433,6 +437,7 @@ function ComputosTableRow({
                                   allowEmpty
                                   placeholder={
                                     isSteel ? 'Barras' :
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Alto m' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
@@ -443,6 +448,7 @@ function ComputosTableRow({
                                   className="w-full px-1 py-1 text-xs text-right font-medium bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
                                   title={
                                     isSteel ? 'Número de barras por elemento' :
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Altura del marco (jambas verticales) en metros' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura o profundidad del cilindro en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Longitud del tramo a 2 aguas en metros' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C del triángulo en metros (o vacío para isósceles C=A)' :
@@ -462,9 +468,9 @@ function ComputosTableRow({
                                 <MathQuantityInput
                                   value={it.times ?? 1}
                                   onChange={(val) => handleUpdateItemField(it.id, 'times', val)}
-                                  integerOnly
+                                  decimals={3}
                                   className="w-full px-1 py-1 text-xs text-center font-bold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded"
-                                  title={isSteel ? 'Número de piezas / elementos iguales' : 'Número de repeticiones (admite negativos para deducciones)'}
+                                  title={isSteel ? 'Número de piezas / elementos iguales' : 'Número de repeticiones (admite decimales y negativos para deducciones)'}
                                 />
                               )}
                             </td>
@@ -689,32 +695,36 @@ function ComputosTableRow({
                                     {it.unit || 'M2'}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
-                                    <MathQuantityInput
-                                      value={p.length ?? ''}
-                                      onChange={(val) =>
-                                        handleUpdatePartialField(it.id, p.id, 'length', val)
-                                      }
-                                      allowEmpty
-                                      placeholder={
-                                        isSteel ? 'Long. m' :
-                                        p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
-                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
-                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
-                                        p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
-                                        p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
-                                        p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
-                                      }
-                                      className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
-                                      title={
-                                        isSteel ? 'Longitud de corte (m)' :
-                                        p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diámetro del cilindro / pilote en metros' :
-                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base del triángulo en metros' :
-                                        p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A del triángulo en metros' :
-                                        p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Mayor del trapecio en metros (B)' :
-                                        p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base mayor en metros' :
-                                        p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Longitud de la zanja en metros' : 'Largo (m)'
-                                      }
-                                    />
+                                    {p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? (
+                                      <span className="block text-center text-xs text-gray-400 font-bold select-none" title="No aplica para marcos (usar Ancho y Alto)">—</span>
+                                    ) : (
+                                      <MathQuantityInput
+                                        value={p.length ?? ''}
+                                        onChange={(val) =>
+                                          handleUpdatePartialField(it.id, p.id, 'length', val)
+                                        }
+                                        allowEmpty
+                                        placeholder={
+                                          isSteel ? 'Long. m' :
+                                          p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
+                                          p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
+                                          p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                          p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
+                                        }
+                                        className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
+                                        title={
+                                          isSteel ? 'Longitud de corte (m)' :
+                                          p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diámetro del cilindro / pilote en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base del triángulo en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A del triángulo en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Mayor del trapecio en metros (B)' :
+                                          p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado de base mayor en metros' :
+                                          p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Longitud de la zanja en metros' : 'Largo (m)'
+                                        }
+                                      />
+                                    )}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1">
                                     {isSteel ? (
@@ -748,6 +758,7 @@ function ComputosTableRow({
                                         }
                                         allowEmpty
                                         placeholder={
+                                          p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho m' :
                                           p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
                                           p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                           p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
@@ -756,6 +767,7 @@ function ComputosTableRow({
                                         }
                                         className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                         title={
+                                          p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho del marco (vano horizontal) en metros' :
                                           p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Altura del triángulo en metros' :
                                           p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B del triángulo en metros' :
                                           p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Menor del trapecio en metros (b)' :
@@ -774,6 +786,7 @@ function ComputosTableRow({
                                       allowEmpty
                                       placeholder={
                                         isSteel ? 'Barras' :
+                                        p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Alto m' :
                                         p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
@@ -784,6 +797,7 @@ function ComputosTableRow({
                                       className="w-full px-1 py-0.5 text-xs text-right bg-white border border-amber-200 rounded"
                                       title={
                                         isSteel ? 'Número de barras' :
+                                        p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Altura del marco (jambas verticales) en metros' :
                                         p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura o profundidad del cilindro en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Longitud del tramo a 2 aguas en metros' :
                                         p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C del triángulo en metros (o vacío para isósceles C=A)' :
@@ -799,9 +813,9 @@ function ComputosTableRow({
                                       onChange={(val) =>
                                         handleUpdatePartialField(it.id, p.id, 'times', val)
                                       }
-                                      integerOnly
+                                      decimals={3}
                                       className="w-full px-1 py-0.5 text-xs text-center font-bold bg-white border border-amber-200 rounded"
-                                      title={isSteel ? 'Número de piezas iguales' : 'Veces (admite negativos para deducciones)'}
+                                      title={isSteel ? 'Número de piezas iguales' : 'Veces (admite decimales y negativos para deducciones)'}
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">

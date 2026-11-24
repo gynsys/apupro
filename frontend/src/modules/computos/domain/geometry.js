@@ -18,6 +18,7 @@ export const GEOMETRY_TYPES = {
   TRAPEZOID: 'trapezoid',
   TRUNCATED_PYRAMID: 'truncated_pyramid',
   TRENCH: 'trench',
+  DOOR_FRAME: 'door_frame',
 };
 
 export function getDefaultGeometryType(unit = '') {
@@ -86,6 +87,13 @@ export const GEOMETRY_CONFIGS = [
     shortLabel: 'Zanja',
     icon: '⛏️',
     description: 'Longitud × Ancho × Profundidad (m³)',
+  },
+  {
+    id: GEOMETRY_TYPES.DOOR_FRAME,
+    label: 'Marco de Puerta / Ventana (2 × Alto + Ancho)',
+    shortLabel: 'Marco (2H + A)',
+    icon: '🚪',
+    description: 'Marco en metro lineal ((2 × Altura + Ancho) × Veces)',
   },
 ];
 
@@ -313,6 +321,42 @@ export function computeGeometryBase(row, unit = 'M3') {
         const vExc = round2(rawExc);
         const formulaStr = `${l}m × ${w}m × ${h}m = ${vExc}m³`;
         return { baseGeom: vExc, rawBaseGeom: rawExc, formulaStr };
+      }
+      break;
+    }
+
+    case GEOMETRY_TYPES.DOOR_FRAME: {
+      // row.height = Altura H (m), row.width o row.length = Ancho A (m)
+      const h = parseNum(row.height);
+      const a = parseNum(row.width) ?? parseNum(row.length);
+
+      if (h !== null && h > 0 && a !== null && a > 0) {
+        const rawLen = (2 * h) + a;
+        const roundedLen = round2(rawLen);
+        const formulaStr = `(2 × ${h}m + ${a}m) = ${roundedLen}m`;
+        return {
+          baseGeom: roundedLen,
+          rawBaseGeom: rawLen,
+          formulaStr,
+        };
+      } else if (h !== null && h > 0) {
+        const rawLen = 2 * h;
+        const roundedLen = round2(rawLen);
+        const formulaStr = `(2 × ${h}m) = ${roundedLen}m`;
+        return {
+          baseGeom: roundedLen,
+          rawBaseGeom: rawLen,
+          formulaStr,
+        };
+      } else if (a !== null && a > 0) {
+        const rawLen = a;
+        const roundedLen = round2(rawLen);
+        const formulaStr = `(${a}m) = ${roundedLen}m`;
+        return {
+          baseGeom: roundedLen,
+          rawBaseGeom: rawLen,
+          formulaStr,
+        };
       }
       break;
     }

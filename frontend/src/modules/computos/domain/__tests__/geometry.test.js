@@ -294,4 +294,71 @@ describe('Steel Rebar Diameter Selection & Factor Synchronization', () => {
     expect(item.partials[2].partial).toBe(-1.52);
     expect(item.quantity).toBe(10.15);
   });
+
+  it('exposes Marco (2H + A) in GEOMETRY_CONFIGS with door icon', () => {
+    const frameConfig = GEOMETRY_CONFIGS.find((g) => g.id === GEOMETRY_TYPES.DOOR_FRAME);
+    expect(frameConfig).toBeDefined();
+    expect(frameConfig.shortLabel).toBe('Marco (2H + A)');
+    expect(frameConfig.icon).toBe('🚪');
+    expect(frameConfig.label).toContain('2 × Alto + Ancho');
+  });
+
+  it('computes door frame linear meters (Longitud = 2 × Altura + Ancho)', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.DOOR_FRAME,
+      height: 2.10, // Altura 2.10m (2 jambas)
+      width: 0.90,  // Ancho 0.90m (1 cabezal)
+      unit: 'ML',
+    };
+    const res = computeGeometryBase(row, 'ML');
+    // 2 * 2.10 + 0.90 = 4.20 + 0.90 = 5.10 ML
+    expect(res.baseGeom).toBe(5.10);
+    expect(res.formulaStr).toBe('(2 × 2.1m + 0.9m) = 5.1m');
+  });
+
+  it('computes door frame with length as fallback when width is not set', () => {
+    const row = {
+      geometryType: GEOMETRY_TYPES.DOOR_FRAME,
+      height: 2.00,
+      length: 1.00, // Ancho ingresado en length
+      width: '',
+      unit: 'ML',
+    };
+    const res = computeGeometryBase(row, 'ML');
+    // 2 * 2.00 + 1.00 = 5.00 ML
+    expect(res.baseGeom).toBe(5.00);
+    expect(res.formulaStr).toBe('(2 × 2m + 1m) = 5m');
+  });
+
+  it('computes door frame with decimal times (e.g. 1.5 marcos de 2.10 × 0.90)', () => {
+    const baseRow = {
+      id: 'frame-row-1',
+      geometryType: GEOMETRY_TYPES.DOOR_FRAME,
+      height: 2.10,
+      width: 0.90,
+      times: 1,
+      unit: 'ML',
+    };
+    const row1 = recomputeRow(baseRow, 'times', 1.5);
+    // Base = 5.10, times = 1.5 -> total = 7.65 ML
+    expect(row1.partial).toBe(5.10);
+    expect(row1.quantity).toBe(7.65);
+    expect(row1.formula).toBe('1.5 × [(2 × 2.1m + 0.9m) = 5.1m]');
+    // M3 should NOT be populated for linear frames
+    expect(row1.m3).toBeFalsy();
+  });
+
+  it('computes door frame partials in a partida with sum of multiple frames and decimal times', () => {
+    const item = recomputeItemWithPartials({
+      id: 'item-marcos-covenin',
+      unit: 'ML',
+      partials: [
+        { id: 'p1', geometryType: GEOMETRY_TYPES.DOOR_FRAME, height: 2.10, width: 0.90, times: 3 },    // 3 × 5.10 = 15.30
+        { id: 'p2', geometryType: GEOMETRY_TYPES.DOOR_FRAME, height: 2.10, width: 0.70, times: 2.5 },  // 2.5 × (4.20 + 0.70) = 2.5 × 4.90 = 12.25
+      ],
+    });
+    expect(item.partials[0].partial).toBe(15.30);
+    expect(item.partials[1].partial).toBe(12.25);
+    expect(item.quantity).toBe(27.55);
+  });
 });

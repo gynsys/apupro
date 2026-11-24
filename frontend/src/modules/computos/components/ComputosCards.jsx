@@ -322,7 +322,7 @@ export default function ComputosCards({
                                 <MathQuantityInput
                                   value={it.times ?? 1}
                                   onChange={(val) => handleUpdateItemField(it.id, 'times', val)}
-                                  integerOnly
+                                  decimals={3}
                                   className="w-full px-2.5 py-1.5 text-xs text-center font-bold rounded-lg border border-amber-300 bg-white"
                                 />
                               </div>
@@ -334,6 +334,7 @@ export default function ComputosCards({
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   {
                                     isSteel ? 'LONG. (m)' :
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? '— (NO APLICA)' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'DIÁMETRO Ø' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'BASE (m)' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'LADO A (m)' :
@@ -342,26 +343,33 @@ export default function ComputosCards({
                                     it.geometryType === GEOMETRY_TYPES.TRENCH ? 'LONGITUD' : 'LARGO (m)'
                                   }
                                 </label>
-                                <MathQuantityInput
-                                  value={it.length ?? ''}
-                                  onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
-                                  allowEmpty
-                                  placeholder={
-                                    isSteel ? 'Long. m' :
-                                    it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
-                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
-                                    it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
-                                    it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
-                                    it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
-                                    it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
-                                  }
-                                  className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                                />
+                                {it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? (
+                                  <div className="w-full px-2 py-1.5 text-xs text-center font-bold text-gray-300 rounded-lg border border-amber-200 bg-gray-50 select-none">
+                                    —
+                                  </div>
+                                ) : (
+                                  <MathQuantityInput
+                                    value={it.length ?? ''}
+                                    onChange={(val) => handleUpdateItemField(it.id, 'length', val)}
+                                    allowEmpty
+                                    placeholder={
+                                      isSteel ? 'Long. m' :
+                                      it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                      it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                      it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
+                                      it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
+                                      it.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                      it.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
+                                    }
+                                    className="w-full px-2 py-1.5 text-xs text-right font-medium rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                  />
+                                )}
                               </div>
                               <div>
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   {
                                     isSteel ? 'DIÁMETRO Ø' :
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'ANCHO MARCO' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? '— (CIRCULAR)' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'ALT. TRIÁNG.' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'LADO B (m)' :
@@ -400,6 +408,7 @@ export default function ComputosCards({
                                     onChange={(val) => handleUpdateItemField(it.id, 'width', val)}
                                     allowEmpty
                                     placeholder={
+                                      it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho m' :
                                       it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
                                       it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                       it.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
@@ -414,6 +423,7 @@ export default function ComputosCards({
                                 <label className="block text-[10px] font-bold text-amber-900 mb-0.5">
                                   {
                                     isSteel ? 'N° BARRAS' :
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'ALTURA MARCO' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'ALTURA H' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'LARGO TRAMO' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'LADO C (m)' :
@@ -428,6 +438,7 @@ export default function ComputosCards({
                                   allowEmpty
                                   placeholder={
                                     isSteel ? 'Barras' :
+                                    it.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Alto m' :
                                     it.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
                                     it.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
@@ -663,6 +674,7 @@ export default function ComputosCards({
                                           <label className="block text-[9px] font-bold text-amber-800">
                                             {
                                               isSteel ? 'Long. (m)' :
+                                              p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? '— (No aplica)' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base (m)' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A (m)' :
@@ -671,28 +683,35 @@ export default function ComputosCards({
                                               p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. (m)' : 'Largo (m)'
                                             }
                                           </label>
-                                          <MathQuantityInput
-                                            value={p.length ?? ''}
-                                            onChange={(val) =>
-                                              handleUpdatePartialField(it.id, p.id, 'length', val)
-                                            }
-                                            allowEmpty
-                                            placeholder={
-                                              isSteel ? 'Long. m' :
-                                              p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
-                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
-                                              p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
-                                              p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
-                                              p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
-                                              p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
-                                            }
-                                            className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
-                                          />
+                                          {p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? (
+                                            <div className="w-full px-1.5 py-1 text-xs text-center font-bold text-gray-300 bg-gray-50 border border-amber-200 rounded-lg select-none">
+                                              —
+                                            </div>
+                                          ) : (
+                                            <MathQuantityInput
+                                              value={p.length ?? ''}
+                                              onChange={(val) =>
+                                                handleUpdatePartialField(it.id, p.id, 'length', val)
+                                              }
+                                              allowEmpty
+                                              placeholder={
+                                                isSteel ? 'Long. m' :
+                                                p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Diám. Ø' :
+                                                p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Base m' :
+                                                p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado A m' :
+                                                p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base May. B' :
+                                                p.geometryType === GEOMETRY_TYPES.TRUNCATED_PYRAMID ? 'Lado May.' :
+                                                p.geometryType === GEOMETRY_TYPES.TRENCH ? 'Long. m' : '0.00'
+                                              }
+                                              className="w-full px-1.5 py-1 text-xs text-right bg-white border border-amber-200 rounded-lg"
+                                            />
+                                          )}
                                         </div>
                                         <div>
                                           <label className="block text-[9px] font-bold text-amber-800">
                                             {
                                               isSteel ? 'Diámetro' :
+                                              p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho marco' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? '— (Circ.)' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B (m)' :
@@ -733,6 +752,7 @@ export default function ComputosCards({
                                               }
                                               allowEmpty
                                               placeholder={
+                                                p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Ancho m' :
                                                 p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Alt. Triáng.' :
                                                 p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado B m' :
                                                 p.geometryType === GEOMETRY_TYPES.TRAPEZOID ? 'Base Men. b' :
@@ -747,6 +767,7 @@ export default function ComputosCards({
                                           <label className="block text-[9px] font-bold text-amber-800">
                                             {
                                               isSteel ? 'Barras' :
+                                              p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Altura marco' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo (m)' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C (m)' :
@@ -763,6 +784,7 @@ export default function ComputosCards({
                                             allowEmpty
                                             placeholder={
                                               isSteel ? 'Barras' :
+                                              p.geometryType === GEOMETRY_TYPES.DOOR_FRAME ? 'Alto m' :
                                               p.geometryType === GEOMETRY_TYPES.CYLINDER ? 'Altura H' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE ? 'Largo m' :
                                               p.geometryType === GEOMETRY_TYPES.TRIANGLE_3_SIDES ? 'Lado C m' :
@@ -780,7 +802,7 @@ export default function ComputosCards({
                                             onChange={(val) =>
                                               handleUpdatePartialField(it.id, p.id, 'times', val)
                                             }
-                                            integerOnly
+                                            decimals={3}
                                             className="w-full px-1.5 py-1 text-xs text-center font-bold bg-white border border-amber-200 rounded-lg"
                                           />
                                         </div>

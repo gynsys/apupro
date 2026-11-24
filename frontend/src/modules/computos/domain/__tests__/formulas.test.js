@@ -89,6 +89,10 @@ describe('fórmulas de cómputos', () => {
     const withTimes = recomputeRow(withDist, 'times', '2');
     expect(withTimes.partial).toBe(145.92);
     expect(withTimes.quantity).toBe(291.84);
+
+    const withDecimalTimes = recomputeRow(withDist, 'times', '1.5');
+    expect(withDecimalTimes.partial).toBe(145.92);
+    expect(withDecimalTimes.quantity).toBe(218.88);
   });
 
   it('redondea a dos decimales con round2', () => {
