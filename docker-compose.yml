@@ -10,13 +10,13 @@ services:
     volumes:
       - apupro_db_data:/var/lib/postgresql/data
     ports:
-      - "5440:5432"
+      - "127.0.0.1:5440:5432"
 
   apupro-redis:
     image: redis:7-alpine
     restart: always
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - apupro_redis_data:/data
     command: redis-server --appendonly yes

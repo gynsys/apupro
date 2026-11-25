@@ -4,11 +4,16 @@ from __future__ import annotations
 import math
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from io import BytesIO
 from typing import Any, Dict, List, Optional
 
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.budget import Budget, BudgetItem
+from app.modules.control_obra.cronograma_domain import build_schedule_dataset
+from app.modules.control_obra.cronograma_excel import generate_cronograma_workbook
 from app.modules.control_obra.domain import (
     Addendum,
     ControlObra,
@@ -644,12 +649,8 @@ def curve(db: Session, budget: Budget) -> List[Dict[str, Any]]:
     return result
 
 
-def build_report(db: Session, budget: Budget):
+def build_report(db: Session, budget: Budget) -> BytesIO:
     """Genera un libro Excel de control de obra y devuelve los bytes."""
-    from io import BytesIO
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-
     data = summary(db, budget)
     wb = Workbook()
     ws = wb.active
@@ -691,6 +692,116 @@ def build_report(db: Session, budget: Budget):
     wb.save(buffer)
     buffer.seek(0)
     return buffer
+
+
+def get_cronograma_dataset(
+    db: Session,
+    budget: Budget,
+    start_date: Optional[date] = None,
+    total_weeks: int = 13,
+    end_date: Optional[date] = None,
+    iva_rate: float = 0.16,
+) -> Dict[str, Any]:
+    """Obtiene los datos estructurados del cronograma general, capítulos, Curva S y prorrateo."""
+    if total_weeks < 1:
+        raise ControlObraError("total_weeks debe ser al menos 1")
+    summary_data = summary(db, budget)
+    items = summary_data.get("items", [])
+
+    if not start_date:
+        planned_starts = [
+            date.fromisoformat(it["planned_start"])
+            for it in items
+            if it.get("planned_start")
+        ]
+        if planned_starts:
+            start_date = min(planned_starts)
+        else:
+            start_date = date.today()
+
+    return build_schedule_dataset(
+        items=items,
+        start_date=start_date,
+        total_weeks=total_weeks,
+        end_date=end_date,
+        iva_rate=iva_rate,
+    )
+
+
+def build_cronograma_excel(
+    db: Session,
+    budget: Budget,
+    start_date: Optional[date] = None,
+    total_weeks: int = 13,
+    end_date: Optional[date] = None,
+    iva_rate: float = 0.16,
+    contractor_name: str = "Constructora",
+    contractee_name: str = "Propietario / Ente Contratante",
+    location: str = "Ubicación de la obra",
+) -> BytesIO:
+    """Genera el libro Excel profesional con las 4 hojas dinámicas del cronograma de obra."""
+    dataset = get_cronograma_dataset(
+        db=db,
+        budget=budget,
+        start_date=start_date,
+        total_weeks=total_weeks,
+        end_date=end_date,
+        iva_rate=iva_rate,
+    )
+    return generate_cronograma_workbook(
+        dataset=dataset,
+        budget_name=budget.name or "Control de Obra",
+        contractor_name=contractor_name,
+        contractee_name=contractee_name,
+        location=location,
+    )
+
+
+def save_schedule_weeks(
+    db: Session,
+    budget: Budget,
+    start_date: date,
+    total_weeks: int,
+    items_schedule: List[Dict[str, Any]],
+) -> List[ControlObraPlan]:
+    """Guarda en lote las semanas de inicio y fin para las partidas del presupuesto."""
+    if not isinstance(start_date, date):
+        raise ControlObraError("start_date debe ser una instancia de date")
+    if total_weeks < 1:
+        raise ControlObraError("total_weeks debe ser al menos 1")
+
+    existing_plans = {
+        str(p.budget_item_id): p
+        for p in db.query(ControlObraPlan).filter(ControlObraPlan.budget_id == budget.id).all()
+    }
+
+    saved: List[ControlObraPlan] = []
+    for entry in items_schedule:
+        item_id = str(entry.get("item_id") or "")
+        if not item_id:
+            continue
+        s_w = max(1, min(total_weeks, int(entry.get("start_week") or 1)))
+        e_w = max(s_w, min(total_weeks, int(entry.get("end_week") or total_weeks)))
+
+        p_start = start_date + timedelta(days=7 * (s_w - 1))
+        p_end = start_date + timedelta(days=7 * e_w - 1)
+
+        plan = existing_plans.get(item_id)
+        if plan:
+            plan.planned_start = p_start
+            plan.planned_end = p_end
+        else:
+            plan = ControlObraPlan(
+                budget_id=budget.id,
+                budget_item_id=item_id,
+                planned_start=p_start,
+                planned_end=p_end,
+            )
+            db.add(plan)
+        saved.append(plan)
+
+    db.commit()
+    return saved
 
 
 def create_progress(

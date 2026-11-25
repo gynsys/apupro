@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Check, Loader2, Plus, RefreshCw, X, Download } from 'lucide-react';
+import { Activity, Check, Loader2, Plus, RefreshCw, X, Download, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { controlObraService } from './controlObraService';
 import BudgetFromComputosModal from '../../components/modals/BudgetFromComputosModal';
+import CronogramaTab from './components/CronogramaTab';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -174,6 +175,22 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
     }
   };
 
+  const downloadCronograma = async () => {
+    try {
+      const blob = await controlObraService.downloadCronograma(budgetId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const cleanName = (budgetName || data?.budget_name || 'CRONOGRAMA').replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.download = `CRONOGRAMA_GENERAL_${cleanName}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('Cronograma Excel descargado exitosamente.');
+    } catch (error) {
+      toast.error(error.message || 'Error al descargar el cronograma.');
+    }
+  };
+
   const editProgress = async (entry) => {
     const rawQuantity = window.prompt('Nueva cantidad ejecutada:', entry.quantity);
     if (rawQuantity === null) return;
@@ -300,7 +317,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={downloadReport} className="p-2 rounded-lg hover:bg-slate-200" title="Descargar Excel">
+            <button onClick={downloadCronograma} className="p-2 rounded-lg hover:bg-blue-100 text-blue-700" title="Descargar Cronograma General (Excel)">
+              <FileSpreadsheet size={18} />
+            </button>
+            <button onClick={downloadReport} className="p-2 rounded-lg hover:bg-slate-200 text-slate-600" title="Descargar Reporte Control de Obra">
               <Download size={18} />
             </button>
             <button onClick={load} className="p-2 rounded-lg hover:bg-slate-200" title="Actualizar">
@@ -330,10 +350,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
             </div>
 
             <div className="px-4 sm:px-6 border-b border-slate-200 flex gap-1 overflow-x-auto bg-white shrink-0 min-h-[38px]">
-              {['resumen', 'partidas', 'computos', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
+              {['resumen', 'cronograma', 'partidas', 'computos', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
                 <button key={key} onClick={() => key === 'computos' ? setShowComputos(true) : setTab(key)}
-                  className={`px-3 py-2 text-xs font-semibold whitespace-nowrap rounded-t-lg ${tab === key ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                  {{ resumen: 'Resumen', partidas: 'Partidas', computos: 'Cómputos', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
+                  className={`px-3 py-2 text-xs font-semibold whitespace-nowrap rounded-t-lg ${tab === key ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
+                  {{ resumen: 'Resumen', cronograma: 'Cronograma', partidas: 'Partidas', computos: 'Cómputos', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
                 </button>
               ))}
             </div>
@@ -361,6 +381,15 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                       ))}
                   </div>
                 </div>
+              )}
+
+              {tab === 'cronograma' && (
+                <CronogramaTab
+                  budgetId={budgetId}
+                  budgetName={budgetName || data?.budget_name}
+                  currency={currency}
+                  onReloadSummary={load}
+                />
               )}
 
               {tab === 'partidas' && (

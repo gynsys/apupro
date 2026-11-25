@@ -76,4 +76,26 @@ export const controlObraService = {
     if (!response.ok) throw new Error('No se pudo generar el reporte');
     return response.blob();
   },
+  getSchedule: (budgetId, params = {}) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const qs = new URLSearchParams(cleanParams).toString();
+    return request(`/budgets/${budgetId}/control-obra/schedule${qs ? `?${qs}` : ''}`);
+  },
+  saveSchedule: (budgetId, payload) => request(`/budgets/${budgetId}/control-obra/schedule`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  downloadCronograma: async (budgetId, params = {}) => {
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const qs = new URLSearchParams(cleanParams).toString();
+    const response = await fetch(`${API_URL}/budgets/${budgetId}/control-obra/cronograma.xlsx${qs ? `?${qs}` : ''}`, {
+      headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+    });
+    if (!response.ok) throw new Error('No se pudo generar el cronograma en Excel');
+    return response.blob();
+  },
 };

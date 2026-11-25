@@ -16,6 +16,7 @@ from app.modules.control_obra.service import (
     approve_addendum,
     approve_modification,
     auto_plan,
+    build_cronograma_excel,
     build_report,
     close_period,
     create_addendum,
@@ -23,9 +24,11 @@ from app.modules.control_obra.service import (
     create_period,
     create_progress,
     curve,
+    get_cronograma_dataset,
     list_periods,
     load_budget,
     reopen_period,
+    save_schedule_weeks,
     set_plan,
     summary,
     sync_progress,
@@ -104,6 +107,18 @@ class PlanCreate(BaseModel):
 class AutoPlanCreate(BaseModel):
     start_date: date
     mode: str = "chapters"
+
+
+class ScheduleItemUpdate(BaseModel):
+    item_id: str
+    start_week: int = Field(ge=1)
+    end_week: int = Field(ge=1)
+
+
+class ScheduleSaveRequest(BaseModel):
+    start_date: date
+    total_weeks: int = Field(ge=1, le=104, default=13)
+    items: List[ScheduleItemUpdate]
 
 
 def _budget_or_404(db: Session, budget_id: str, current_user: ArkoAdmin):
@@ -361,3 +376,68 @@ def download_report(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="control_obra_{budget.id}.xlsx"'},
     )
+
+
+@router.get("/cronograma.xlsx")
+def download_cronograma(
+    budget_id: str,
+    start_date: Optional[date] = None,
+    total_weeks: int = 13,
+    contractor_name: str = "Constructora",
+    contractee_name: str = "Propietario / Ente Contratante",
+    location: str = "Ubicación de la obra",
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+):
+    budget = _budget_or_404(db, budget_id, current_user)
+    buffer = build_cronograma_excel(
+        db=db,
+        budget=budget,
+        start_date=start_date,
+        total_weeks=total_weeks,
+        contractor_name=contractor_name,
+        contractee_name=contractee_name,
+        location=location,
+    )
+    clean_name = "".join(c for c in (budget.name or "CRONOGRAMA") if c.isalnum() or c in (" ", "_", "-")).strip()
+    filename = f"CRONOGRAMA_GENERAL_{clean_name.replace(' ', '_')}.xlsx"
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/schedule")
+def get_schedule(
+    budget_id: str,
+    start_date: Optional[date] = None,
+    total_weeks: int = 13,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    budget = _budget_or_404(db, budget_id, current_user)
+    return get_cronograma_dataset(
+        db=db,
+        budget=budget,
+        start_date=start_date,
+        total_weeks=total_weeks,
+    )
+
+
+@router.post("/schedule")
+def save_schedule(
+    budget_id: str,
+    payload: ScheduleSaveRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    budget = _budget_or_404(db, budget_id, current_user)
+    saved = save_schedule_weeks(
+        db=db,
+        budget=budget,
+        start_date=payload.start_date,
+        total_weeks=payload.total_weeks,
+        items_schedule=[it.dict() for it in payload.items],
+    )
+    return {"saved_count": len(saved), "status": "ok"}
