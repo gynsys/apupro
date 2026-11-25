@@ -1426,6 +1426,14 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     }
   };
 
+  const handlePasteIntoRow = (targetItemId, copiedData) => {
+    isDirtyRef.current = true;
+    rowsDispatch({
+      type: 'PASTE_INTO_ROW',
+      payload: { targetItemId, copiedData, activeChapter },
+    });
+  };
+
   const handleUnlinkRow = (itemId) => {
     isDirtyRef.current = true;
     rowsDispatch({
@@ -2706,6 +2714,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         onAddMacroRows={handleAddMacroRows}
         macroInstances={macroInstances}
         onPasteRows={handlePasteRows}
+        handlePasteIntoRow={handlePasteIntoRow}
       />
 
       {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}

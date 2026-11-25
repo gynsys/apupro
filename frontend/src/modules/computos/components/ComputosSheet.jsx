@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Pencil, Plus, Copy, ClipboardPaste } from 'lucide-react';
+import { Pencil, Plus, Copy, ClipboardPaste, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ComputosCards from './ComputosCards.jsx';
 import ComputosTable from './ComputosTable.jsx';
 import PerimeterWallModal from './PerimeterWallModal.jsx';
 import PasteComputosModal from './modals/PasteComputosModal.jsx';
-import { copyRowsToClipboard, parseTabularComputosClipboard } from '../domain/clipboard.js';
+import { serializeRowsToTsv, parseTabularComputosClipboard, KOSTOS360_CLIPBOARD_KEY } from '../domain/clipboard.js';
 import { isItemEmpty } from '../domain/rows.js';
 
 export default function ComputosSheet({
@@ -35,66 +35,229 @@ export default function ComputosSheet({
   onAddMacroRows,
   macroInstances = [],
   onPasteRows,
+  handlePasteIntoRow,
 }) {
   const [showWallModal, setShowWallModal] = useState(false);
   const [wallEditing, setWallEditing] = useState(null);
 
-  // Estado de filas sombreadas / seleccionadas para copiar
-  const [selectedRowIds, setSelectedRowIds] = useState(new Set());
-  const [lastSelectedIdx, setLastSelectedIdx] = useState(null);
+  // Estados de selección independiente: Mediciones (ITEM) y Descripción
+  const [selectedMeasurementIds, setSelectedMeasurementIds] = useState(new Set());
+  const [selectedDescriptionIds, setSelectedDescriptionIds] = useState(new Set());
+  const [activeRowId, setActiveRowId] = useState(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
 
-  const onToggleSelectRow = useCallback((rowId, isShift) => {
-    setSelectedRowIds((prev) => {
+  // Inicializar activeRowId en la primera fila válida
+  useEffect(() => {
+    if (!activeRowId && filteredCapturedItems.length > 0) {
+      const firstValid = filteredCapturedItems.find((r) => !isItemEmpty(r));
+      if (firstValid) setActiveRowId(firstValid.id);
+    }
+  }, [activeRowId, filteredCapturedItems]);
+
+  const onToggleSelectMeasurement = useCallback((rowId) => {
+    setSelectedMeasurementIds((prev) => {
       const next = new Set(prev);
-      const currentIdx = filteredCapturedItems.findIndex((r) => r.id === rowId);
-
-      if (isShift && lastSelectedIdx !== null && currentIdx !== -1) {
-        const start = Math.min(lastSelectedIdx, currentIdx);
-        const end = Math.max(lastSelectedIdx, currentIdx);
-        for (let i = start; i <= end; i++) {
-          const item = filteredCapturedItems[i];
-          if (item && !isItemEmpty(item)) {
-            next.add(item.id);
-          }
-        }
-      } else {
-        if (next.has(rowId)) {
-          next.delete(rowId);
-        } else {
-          next.add(rowId);
-        }
-      }
-
-      setLastSelectedIdx(currentIdx);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
       return next;
     });
-  }, [filteredCapturedItems, lastSelectedIdx]);
+    setActiveRowId(rowId);
+  }, []);
 
-  const onSelectAllRows = useCallback((selectAll) => {
+  const onToggleSelectDescription = useCallback((rowId) => {
+    setSelectedDescriptionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
+    setActiveRowId(rowId);
+  }, []);
+
+  const onSelectAllMeasurements = useCallback((selectAll) => {
     if (selectAll) {
-      const allIds = filteredCapturedItems
-        .filter((r) => !isItemEmpty(r))
-        .map((r) => r.id);
-      setSelectedRowIds(new Set(allIds));
+      const ids = filteredCapturedItems.filter((r) => !isItemEmpty(r)).map((r) => r.id);
+      setSelectedMeasurementIds(new Set(ids));
     } else {
-      setSelectedRowIds(new Set());
+      setSelectedMeasurementIds(new Set());
+    }
+  }, [filteredCapturedItems]);
+
+  const onSelectAllDescriptions = useCallback((selectAll) => {
+    if (selectAll) {
+      const ids = filteredCapturedItems.filter((r) => !isItemEmpty(r)).map((r) => r.id);
+      setSelectedDescriptionIds(new Set(ids));
+    } else {
+      setSelectedDescriptionIds(new Set());
     }
   }, [filteredCapturedItems]);
 
   const handleCopySelected = useCallback(async () => {
-    const selectedRows = filteredCapturedItems.filter((r) => selectedRowIds.has(r.id));
-    if (selectedRows.length === 0) {
-      toast('Sombrea al menos una partida para copiar.');
+    const measIds = new Set(selectedMeasurementIds);
+    const descIds = new Set(selectedDescriptionIds);
+
+    // Si no hay checkboxes marcados pero hay fila activa, copiar las mediciones de esa fila
+    let targetRows = filteredCapturedItems.filter(
+      (r) => !isItemEmpty(r) && (measIds.has(r.id) || descIds.has(r.id))
+    );
+    if (targetRows.length === 0 && activeRowId) {
+      const activeRow = filteredCapturedItems.find((r) => r.id === activeRowId);
+      if (activeRow && !isItemEmpty(activeRow)) {
+        targetRows = [activeRow];
+        measIds.add(activeRow.id);
+      }
+    }
+
+    if (targetRows.length === 0) {
+      toast('Selecciona al menos una partida para copiar.');
       return;
     }
-    const res = await copyRowsToClipboard(selectedRows);
-    if (res.success) {
-      toast.success(`✓ ${res.count} partida(s) sombreada(s) copiadas al portapapeles.`);
-    }
-  }, [filteredCapturedItems, selectedRowIds]);
 
-  const handleApplyPasteRows = useCallback((parsedRows, mode = 'append') => {
+    const firstRow = targetRows[0];
+    const hasMeas = measIds.has(firstRow.id) || measIds.size === 0;
+    const hasDesc = descIds.has(firstRow.id);
+    const copyMode = hasMeas && hasDesc ? 'full' : hasMeas ? 'measurements' : 'description';
+
+    const copiedPayload = {
+      type: 'KOSTOS360_COMPUTOS_CLIPBOARD_V2',
+      copiedAt: new Date().toISOString(),
+      copyMode,
+      sourceRowId: firstRow.id,
+      copiedItem: {
+        copyMode,
+        description: firstRow.description,
+        cod_par: firstRow.cod_par,
+        unit: firstRow.unit,
+        length: firstRow.length,
+        width: firstRow.width,
+        height: firstRow.height,
+        times: firstRow.times,
+        factor: firstRow.factor,
+        distance: firstRow.distance,
+        m3: firstRow.m3,
+        geometryType: firstRow.geometryType,
+        partials: Array.isArray(firstRow.partials) ? firstRow.partials.map((p) => ({ ...p })) : null,
+      },
+      rows: targetRows.map((r) => ({
+        copyMode: measIds.has(r.id) && descIds.has(r.id) ? 'full' : measIds.has(r.id) ? 'measurements' : 'description',
+        ...r,
+      })),
+    };
+
+    try {
+      localStorage.setItem(KOSTOS360_CLIPBOARD_KEY, JSON.stringify(copiedPayload));
+    } catch (_e) {}
+
+    try {
+      const tsvText = serializeRowsToTsv(targetRows);
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(tsvText);
+      }
+    } catch (_e) {}
+
+    const partialCount = Array.isArray(firstRow.partials) ? firstRow.partials.length : 0;
+    if (copyMode === 'measurements') {
+      if (partialCount > 0) {
+        toast.success(`✓ Mediciones copiadas (${partialCount} parciales). Selecciona la partida destino y presiona Ctrl+V.`);
+      } else {
+        toast.success('✓ Mediciones copiadas. Selecciona la partida destino y presiona Ctrl+V.');
+      }
+    } else if (copyMode === 'full') {
+      toast.success(`✓ Partida completa copiada (descripción + ${partialCount} parciales). Selecciona destino y presiona Ctrl+V.`);
+    } else {
+      toast.success('✓ Descripción copiada. Selecciona destino y presiona Ctrl+V.');
+    }
+  }, [selectedMeasurementIds, selectedDescriptionIds, filteredCapturedItems, activeRowId]);
+
+  const handlePasteDirect = useCallback(async () => {
+    // 1. Portapapeles interno de Kostos360 (DIRECTO, SIN MODAL)
+    let stored = null;
+    try {
+      const raw = localStorage.getItem(KOSTOS360_CLIPBOARD_KEY);
+      if (raw) stored = JSON.parse(raw);
+    } catch (_e) {}
+
+    if (stored && stored.type === 'KOSTOS360_COMPUTOS_CLIPBOARD_V2' && stored.copiedItem) {
+      let targetId = activeRowId;
+      if (!targetId && selectedMeasurementIds.size > 0) {
+        targetId = Array.from(selectedMeasurementIds)[0];
+      }
+      if (!targetId && selectedDescriptionIds.size > 0) {
+        targetId = Array.from(selectedDescriptionIds)[0];
+      }
+
+      if (targetId) {
+        if (typeof handlePasteIntoRow === 'function') {
+          handlePasteIntoRow(targetId, stored.copiedItem);
+        }
+        if (Array.isArray(stored.copiedItem.partials) && stored.copiedItem.partials.length > 0) {
+          handleToggleExpandPartials?.(targetId);
+        }
+        const targetRow = filteredCapturedItems.find((r) => r.id === targetId);
+        const pCount = stored.copiedItem.partials?.length || 0;
+        if (stored.copyMode === 'measurements') {
+          toast.success(`✓ ${pCount > 0 ? `${pCount} parciales pegados` : 'Mediciones pegadas'} en "${targetRow?.description || 'Partida'}". Total recalculado.`);
+        } else if (stored.copyMode === 'full') {
+          toast.success(`✓ Partida y ${pCount} parciales pegados en el destino.`);
+        } else {
+          toast.success('✓ Descripción pegada.');
+        }
+        return;
+      }
+
+      if (Array.isArray(stored.rows) && stored.rows.length > 0) {
+        if (typeof onPasteRows === 'function') {
+          onPasteRows(stored.rows, 'append');
+        }
+        toast.success(`✓ ${stored.rows.length} partida(s) anexadas.`);
+        return;
+      }
+    }
+
+    // 2. Portapapeles externo de Excel / texto
+    if (navigator?.clipboard?.readText) {
+      try {
+        const clipText = await navigator.clipboard.readText();
+        if (clipText && (clipText.includes('\t') || clipText.includes('\n'))) {
+          const { rows } = parseTabularComputosClipboard(clipText);
+          if (rows.length > 0) {
+            if (activeRowId) {
+              const partialsFromExcel = rows.map((r, pIdx) => ({
+                id: `part-xl-${pIdx}-${Date.now()}`,
+                description: r.description || `Parcial ${pIdx + 1}`,
+                length: r.length ?? '',
+                width: r.width ?? '',
+                height: r.height ?? '',
+                times: r.times ?? 1,
+                factor: r.factor ?? '',
+                distance: r.distance ?? '',
+                m3: r.m3 ?? '',
+                partial: r.quantity ?? 0,
+              }));
+              if (typeof handlePasteIntoRow === 'function') {
+                handlePasteIntoRow(activeRowId, {
+                  copyMode: 'measurements',
+                  partials: partialsFromExcel,
+                });
+                handleToggleExpandPartials?.(activeRowId);
+                toast.success(`✓ ${partialsFromExcel.length} parciales pegados desde Excel.`);
+                return;
+              }
+            } else if (typeof onPasteRows === 'function') {
+              onPasteRows(rows, 'append');
+              toast.success(`✓ ${rows.length} partida(s) pegadas.`);
+              return;
+            }
+          }
+        }
+      } catch (_e) {}
+    }
+
+    // Modal de pegado solo si no se pudo pegar directamente
+    setShowPasteModal(true);
+  }, [activeRowId, selectedMeasurementIds, selectedDescriptionIds, filteredCapturedItems, handlePasteIntoRow, handleToggleExpandPartials, onPasteRows]);
+
+  const handleApplyPasteModalRows = useCallback((parsedRows, mode = 'append') => {
     if (!parsedRows || parsedRows.length === 0) return;
     if (typeof onPasteRows === 'function') {
       onPasteRows(parsedRows, mode);
@@ -111,7 +274,7 @@ export default function ComputosSheet({
         const activeEl = document.activeElement;
         const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
         const hasSelection = isInput && activeEl.selectionStart !== activeEl.selectionEnd;
-        if (!hasSelection && selectedRowIds.size > 0) {
+        if (!hasSelection) {
           e.preventDefault();
           handleCopySelected();
         }
@@ -121,32 +284,15 @@ export default function ComputosSheet({
         const activeEl = document.activeElement;
         const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
         if (!isInput) {
-          if (navigator?.clipboard?.readText) {
-            navigator.clipboard.readText()
-              .then((clipText) => {
-                if (clipText && (clipText.includes('\t') || clipText.includes('\n'))) {
-                  const { rows } = parseTabularComputosClipboard(clipText);
-                  if (rows.length > 0) {
-                    e.preventDefault();
-                    handleApplyPasteRows(rows, 'append');
-                    return;
-                  }
-                }
-                setShowPasteModal(true);
-              })
-              .catch(() => {
-                setShowPasteModal(true);
-              });
-          } else {
-            setShowPasteModal(true);
-          }
+          e.preventDefault();
+          handlePasteDirect();
         }
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedRowIds, handleCopySelected, handleApplyPasteRows]);
+  }, [handleCopySelected, handlePasteDirect]);
 
   const sharedProps = {
     descriptionFilter,
@@ -171,11 +317,20 @@ export default function ComputosSheet({
     handleUpdateItemField,
     handleUpdatePartialField,
     setDescriptionFilter,
-    selectedRowIds,
-    onToggleSelectRow,
-    onSelectAllRows,
+    selectedMeasurementIds,
+    onToggleSelectMeasurement,
+    selectedDescriptionIds,
+    onToggleSelectDescription,
+    onSelectAllMeasurements,
+    onSelectAllDescriptions,
+    activeRowId,
+    onSetActiveRow: setActiveRowId,
     onCopySelected: handleCopySelected,
-    onClearSelection: () => setSelectedRowIds(new Set()),
+    onPasteSelected: handlePasteDirect,
+    onClearSelection: () => {
+      setSelectedMeasurementIds(new Set());
+      setSelectedDescriptionIds(new Set());
+    },
     onOpenPasteModal: () => setShowPasteModal(true),
   };
 
@@ -187,23 +342,33 @@ export default function ComputosSheet({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowPasteModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-400 bg-white hover:bg-amber-100 text-amber-950 font-extrabold text-xs shadow-2xs cursor-pointer transition-all"
-              title="Pegar partidas sombreadas de Excel u otra planilla (Ctrl+V)"
+              onClick={handlePasteDirect}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-500 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs cursor-pointer transition-all"
+              title="Pegar mediciones copiadas directamente en la partida seleccionada (Ctrl+V)"
             >
-              <ClipboardPaste size={14} className="text-amber-700" />
-              <span>Pegar (Ctrl+V)</span>
+              <ClipboardPaste size={14} className="text-white" />
+              <span>Pegar en Destino (Ctrl+V)</span>
             </button>
 
-            {selectedRowIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowPasteModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-400 bg-white hover:bg-amber-100 text-amber-950 font-extrabold text-xs shadow-2xs cursor-pointer transition-all"
+              title="Importar y previsualizar datos tabulares desde Excel o archivo externo"
+            >
+              <FileSpreadsheet size={14} className="text-emerald-700" />
+              <span>Pegar desde Excel...</span>
+            </button>
+
+            {(selectedMeasurementIds.size > 0 || selectedDescriptionIds.size > 0) && (
               <button
                 type="button"
                 onClick={handleCopySelected}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500 bg-amber-200 hover:bg-amber-300 text-amber-950 font-black text-xs shadow-2xs cursor-pointer animate-in fade-in transition-all"
-                title="Copiar partidas sombreadas al portapapeles (Ctrl+C)"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500 bg-amber-300 hover:bg-amber-400 text-amber-950 font-black text-xs shadow-2xs cursor-pointer animate-in fade-in transition-all"
+                title="Copiar al portapapeles (Ctrl+C)"
               >
-                <Copy size={14} className="text-amber-800" />
-                <span>Copiar ({selectedRowIds.size})</span>
+                <Copy size={14} className="text-amber-900" />
+                <span>Copiar ({selectedMeasurementIds.size + selectedDescriptionIds.size})</span>
               </button>
             )}
 
@@ -257,7 +422,7 @@ export default function ComputosSheet({
       <PasteComputosModal
         isOpen={showPasteModal}
         onClose={() => setShowPasteModal(false)}
-        onPasteRows={handleApplyPasteRows}
+        onPasteRows={handleApplyPasteModalRows}
       />
     </div>
   );

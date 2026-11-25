@@ -335,6 +335,13 @@ export default function MedicionesTab({
     }
   }, [activeChapter]);
 
+  const handlePasteIntoRow = useCallback((targetItemId, copiedData) => {
+    rowsDispatch({
+      type: 'PASTE_INTO_ROW',
+      payload: { targetItemId, copiedData, activeChapter },
+    });
+  }, [activeChapter]);
+
   const handleUnlinkRow = (itemId) => {
     rowsDispatch({
       type: 'UNLINK_ROW',
@@ -800,6 +807,7 @@ export default function MedicionesTab({
         onAddMacroRows={handleAddMacroRows}
         macroInstances={macroInstances}
         onPasteRows={handlePasteRows}
+        handlePasteIntoRow={handlePasteIntoRow}
       />
 
       {/* MODALES DE SOPORTE INTEGRADOS */}

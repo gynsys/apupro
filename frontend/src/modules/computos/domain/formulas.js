@@ -176,8 +176,8 @@ function computePartial(p, parentUnit = '') {
     }
   }
 
-  // Auto-calcular M3 de este tramo si tiene las 3 dimensiones físicas
-  if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
+  // Auto-calcular M3 de este tramo SOLO si la unidad de la partida es de volumen (M3)
+  if (normUnit === 'M3' && l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
     const calcM3 = round2(l * w * h * t);
     if (p.m3 === '' || p.m3 == null || p._autoM3 === p.m3) {
       p.m3 = calcM3;
@@ -228,6 +228,16 @@ function computePartial(p, parentUnit = '') {
     return parcial;
   }
 
+  // Si no hay dimensiones pero el parcial tiene un valor numérico directo (ej. medición fija o vinculada)
+  const existingPartial = parseNum(p.partial);
+  if (existingPartial !== null && existingPartial !== 0) {
+    p.partial = round2(existingPartial);
+    if (!p.formula) {
+      p.formula = `${p.partial} ${normUnit || ''}`.trim();
+    }
+    return p.partial;
+  }
+
   p.partial = 0;
   p.formula = '';
   return 0;
@@ -243,12 +253,21 @@ function recomputeItemWithPartials(item) {
   const total = item.partials.reduce((sum, p) => sum + computePartial(p, item.unit), 0);
   const roundedTotal = round2(total);
 
-  // Suma de M3 para botes y acarreo a partir de los parciales
-  const totalM3 = item.partials.reduce((sum, p) => {
-    const val = parseFloat(String(p.m3).replace(',', '.'));
-    return sum + (!isNaN(val) ? val : 0);
-  }, 0);
-  const roundedM3 = totalM3 !== 0 ? round2(totalM3) : (item.m3 || '');
+  // Suma de M3 para botes y acarreo SOLO si la unidad es M3 o Transporte
+  const isVolumeOrTransportItem =
+    item.unit === 'M3' ||
+    item.unit === 'M3-KM' ||
+    item.unit === 'M3-M' ||
+    item.unit === 'M3X50' ||
+    item.unit === 'TON-KM';
+  let roundedM3 = '';
+  if (isVolumeOrTransportItem) {
+    const totalM3 = item.partials.reduce((sum, p) => {
+      const val = parseFloat(String(p.m3).replace(',', '.'));
+      return sum + (!isNaN(val) ? val : 0);
+    }, 0);
+    roundedM3 = totalM3 !== 0 ? round2(totalM3) : (item.m3 || '');
+  }
 
   const partialSummary = item.partials.length <= 4
     ? item.partials.map((p) => `${p.partial || 0}`).join(' + ') + ` = ${roundedTotal} ${item.unit || ''}`
@@ -394,16 +413,22 @@ function recomputeRow(row, field, value) {
     updated.partial = parcial;
     updated.quantity = total;
 
-    // Auto-cálculo de M3 para botes y acarreo cuando se tienen las 3 dimensiones (Largo × Ancho × Alto)
-    if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
-      const calcM3 = round2(l * w * h * t);
-      if (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3) {
-        updated.m3 = calcM3;
-        updated._autoM3 = calcM3;
+    // Auto-cálculo de M3: SOLO para partidas de volumen (M3) o transporte (M3-KM, M3-M)
+    const isVolumeOrTransportUnit = updated.unit === 'M3' || updated.unit === 'M3-KM' || updated.unit === 'M3-M' || updated.unit === 'M3X50';
+    if (isVolumeOrTransportUnit) {
+      if (l !== null && w !== null && h !== null && l > 0 && w > 0 && h > 0) {
+        const calcM3 = round2(l * w * h * t);
+        if (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3) {
+          updated.m3 = calcM3;
+          updated._autoM3 = calcM3;
+        }
+      } else if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
+        updated.m3 = total;
+        updated._autoM3 = total;
       }
-    } else if (updated.unit === 'M3' && (updated.m3 === '' || updated.m3 == null || updated._autoM3 === updated.m3)) {
-      updated.m3 = total;
-      updated._autoM3 = total;
+    } else {
+      updated.m3 = '';
+      delete updated._autoM3;
     }
 
     // Actualizar fórmula visible con parámetros numéricos explícitos

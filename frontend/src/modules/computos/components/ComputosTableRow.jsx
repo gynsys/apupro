@@ -48,10 +48,20 @@ function ComputosTableRow({
   isBlankTrailing,
   it,
   showChapHeader,
-  isSelected,
-  onToggleSelect,
+  isMeasurementSelected,
+  onToggleSelectMeasurement,
+  isDescriptionSelected,
+  onToggleSelectDescription,
+  isActiveRow,
+  onSetActiveRow,
 }) {
   const isSteel = isSteelRow(it);
+  const isVolumeOrTransport =
+    it.unit === 'M3' ||
+    it.unit === 'M3-KM' ||
+    it.unit === 'M3-M' ||
+    it.unit === 'M3X50' ||
+    it.unit === 'TON-KM';
   const descInputRef = useRef(null);
   const cursorRef = useRef(null);
 
@@ -111,49 +121,69 @@ function ComputosTableRow({
                             </tr>
                           )}
                           <tr
+                            onClick={() => onSetActiveRow?.(it.id)}
                             className={`transition-colors border-b border-gray-300 text-amber-950 ${
-                              isSelected
+                              isActiveRow ? 'border-l-4 border-l-blue-600 bg-blue-50/20' : ''
+                            } ${
+                              isMeasurementSelected && isDescriptionSelected
                                 ? 'bg-amber-100 ring-2 ring-amber-400 font-semibold shadow-xs'
                                 : isBlankTrailing
                                 ? 'bg-amber-50/20 hover:bg-amber-50/50'
                                 : 'hover:bg-amber-50/80'
                             }`}
                           >
-                            {/* N° DE ITEM Y CHECKBOX PARA SOMBREADO/COPIA */}
+                            {/* N° DE ITEM Y CHECKBOX PARA MEDICIONES / PARCIALES */}
                             <td
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onToggleSelect?.(it.id, e.shiftKey);
+                                onToggleSelectMeasurement?.(it.id, e.shiftKey);
+                                onSetActiveRow?.(it.id);
                               }}
                               className={`border border-gray-300 px-1 py-1 text-center font-bold text-xs cursor-pointer select-none transition-colors ${
-                                isSelected ? 'bg-amber-300 text-amber-950' : 'bg-amber-50/40 hover:bg-amber-200/60 text-slate-700'
+                                isMeasurementSelected ? 'bg-amber-300 text-amber-950' : 'bg-amber-50/40 hover:bg-amber-200/60 text-slate-700'
                               }`}
-                              title="Haz clic para sombrear/seleccionar esta fila (Shift+Clic para seleccionar rango)"
+                              title="Seleccionar mediciones y parciales para copiar (Ctrl+C)"
                             >
                               <div className="flex items-center justify-center gap-1">
                                 {!isBlankTrailing && (
                                   <input
                                     type="checkbox"
-                                    checked={Boolean(isSelected)}
+                                    checked={Boolean(isMeasurementSelected)}
                                     onChange={() => {}}
-                                    className="w-3 h-3 text-amber-800 rounded border-amber-400 pointer-events-none"
+                                    className="w-3.5 h-3.5 text-amber-800 rounded border-amber-500 cursor-pointer pointer-events-none"
                                   />
                                 )}
                                 <span>{it.originalIndex !== undefined ? it.originalIndex + 1 : idx + 1}</span>
                               </div>
                             </td>
 
-                            {/* DESCRIPCIÓN */}
-                            <td className="border border-gray-300 px-1 py-1">
+                            {/* DESCRIPCIÓN Y CHECKBOX DE DESCRIPCIÓN */}
+                            <td className={`border border-gray-300 px-1.5 py-1 ${isDescriptionSelected ? 'bg-amber-100 ring-1 ring-amber-400' : ''}`}>
                               <div className="flex flex-col gap-0.5">
-                                <input
-                                  ref={descInputRef}
-                                  type="text"
-                                  value={it.description}
-                                  onChange={handleDescriptionChange}
-                                  placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
-                                  className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
-                                />
+                                <div className="flex items-center gap-1.5">
+                                  {!isBlankTrailing && (
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(isDescriptionSelected)}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        onToggleSelectDescription?.(it.id, e.shiftKey);
+                                        onSetActiveRow?.(it.id);
+                                      }}
+                                      className="w-3.5 h-3.5 text-amber-800 rounded border-amber-500 cursor-pointer shrink-0"
+                                      title="Seleccionar descripción para copiar (Ctrl+C)"
+                                    />
+                                  )}
+                                  <input
+                                    ref={descInputRef}
+                                    type="text"
+                                    value={it.description}
+                                    onChange={handleDescriptionChange}
+                                    onFocus={() => onSetActiveRow?.(it.id)}
+                                    placeholder={isBlankTrailing ? 'Escribe aquí la partida...' : 'Descripción de la partida...'}
+                                    className="w-full px-2 py-1 text-xs font-semibold bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 rounded uppercase placeholder:text-gray-400"
+                                  />
+                                </div>
                                 {hasPartials ? (
                                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                     <button
@@ -520,9 +550,9 @@ function ComputosTableRow({
                             </td>
 
                             {/* DISTANCIA (Km Acarreo) */}
-                            <td className="border border-gray-300 px-1 py-1 bg-amber-50/30">
-                              {hasPartials || isSteel ? (
-                                <span className="block text-center text-xs text-gray-300 font-bold select-none" title={isSteel ? 'No aplica a acero' : 'Desglosado en parciales'}>—</span>
+                            <td className={`border border-gray-300 px-1 py-1 ${isMeasurementSelected ? 'bg-amber-100/70' : 'bg-amber-50/30'}`}>
+                              {hasPartials || isSteel || !isVolumeOrTransport ? (
+                                <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a esta partida">—</span>
                               ) : (
                                 <MathQuantityInput
                                   value={it.distance ?? ''}
@@ -542,13 +572,13 @@ function ComputosTableRow({
                             </td>
 
                             {/* M3 (Botes y Acarreo) */}
-                            <td className="border border-gray-300 px-1 py-1 bg-amber-50/20">
-                              {hasPartials ? (
+                            <td className={`border border-gray-300 px-1 py-1 ${isMeasurementSelected ? 'bg-amber-100/80 font-bold' : 'bg-amber-50/20'}`}>
+                              {!isVolumeOrTransport || isSteel ? (
+                                <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a unidades que no son M3 o Transporte">—</span>
+                              ) : hasPartials ? (
                                 <span className="block text-center text-xs text-amber-800 font-bold select-none" title="Volumen M3 total desglosado en parciales">
                                   {it.m3 !== '' && it.m3 != null ? it.m3 : '—'}
                                 </span>
-                              ) : isSteel ? (
-                                <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a acero">—</span>
                               ) : (
                                 <MathQuantityInput
                                   value={it.m3 ?? ''}
@@ -859,8 +889,8 @@ function ComputosTableRow({
                                     />
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    {isSteel ? (
-                                      <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a acero">—</span>
+                                    {isSteel || !isVolumeOrTransport ? (
+                                      <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a esta partida">—</span>
                                     ) : (
                                       <MathQuantityInput
                                         value={p.distance ?? ''}
@@ -881,8 +911,8 @@ function ComputosTableRow({
                                     )}
                                   </td>
                                   <td className="border border-amber-200 px-1 py-1 bg-amber-50/30">
-                                    {isSteel ? (
-                                      <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a acero">—</span>
+                                    {isSteel || !isVolumeOrTransport ? (
+                                      <span className="block text-center text-xs text-gray-300 font-bold select-none" title="No aplica a unidades que no son M3 o Transporte">—</span>
                                     ) : (
                                       <MathQuantityInput
                                         value={p.m3 ?? ''}

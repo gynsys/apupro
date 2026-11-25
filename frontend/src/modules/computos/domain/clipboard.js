@@ -8,7 +8,7 @@
  */
 
 import { COMMON_UNITS, UNIT_ALIASES, normalizeUnitStr, inferUnitFromDescription } from './units.js';
-import { recomputeRow, round2 } from './formulas.js';
+import { recomputeRow, recomputeItemWithPartials, round2 } from './formulas.js';
 import { createBlankRow, isItemEmpty } from './rows.js';
 
 export const KOSTOS360_CLIPBOARD_KEY = 'kostos360_computos_clipboard_v1';
@@ -443,6 +443,50 @@ export function parseTabularComputosClipboard(text, defaultChapter = 'GENERAL') 
     const m3 = cleanNumericCell(getVal('m3'));
     const obs = getVal('observations') || '';
 
+    // Detectar si esta línea corresponde a un parcial / tramo subordinado
+    const isSubPartial =
+      /^(?:↳|\s*[-*•])\s*(.*)/.test(descRaw) ||
+      /^(?:parcial\s*\d+|tramo\s*\d+|pared\s*\d+|viene\s*de)/i.test(descRaw) ||
+      /^\d+\.\d+$/.test(String(itemNum).trim());
+
+    if (isSubPartial && parsedRows.length > 0) {
+      const parentRow = parsedRows[parsedRows.length - 1];
+      const cleanDesc = descRaw.replace(/^[↳\s*-•]+/, '').trim();
+      const isM3OrTransport =
+        parentRow.unit === 'M3' ||
+        parentRow.unit === 'M3-KM' ||
+        parentRow.unit === 'M3-M' ||
+        parentRow.unit === 'M3X50' ||
+        parentRow.unit === 'TON-KM';
+
+      const partialObj = {
+        id: `part-${Date.now()}-${i}`,
+        description: cleanDesc,
+        length,
+        width,
+        height,
+        times,
+        factor,
+        distance,
+        m3: isM3OrTransport ? m3 : '',
+        observations: obs,
+      };
+
+      if (!Array.isArray(parentRow.partials)) {
+        parentRow.partials = [];
+      }
+      parentRow.partials.push(partialObj);
+      parsedRows[parsedRows.length - 1] = recomputeItemWithPartials(parentRow);
+      continue;
+    }
+
+    const isM3OrTransport =
+      normUnit === 'M3' ||
+      normUnit === 'M3-KM' ||
+      normUnit === 'M3-M' ||
+      normUnit === 'M3X50' ||
+      normUnit === 'TON-KM';
+
     // Crear base de fila
     const blank = createBlankRow(currentChapter);
     let row = {
@@ -459,7 +503,7 @@ export function parseTabularComputosClipboard(text, defaultChapter = 'GENERAL') 
       times,
       factor,
       distance,
-      m3,
+      m3: isM3OrTransport ? m3 : '',
       observations: obs,
     };
 

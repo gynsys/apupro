@@ -135,6 +135,65 @@ function rowsReducerCore(state, action) {
       };
     }
 
+    case 'PASTE_INTO_ROW': {
+      const { targetItemId, copiedData } = payload;
+      if (!targetItemId || !copiedData) return state;
+
+      const targetIndex = rows.findIndex((r) => r.id === targetItemId);
+      if (targetIndex === -1) return state;
+
+      const targetRow = rows[targetIndex];
+      const copyMode = copiedData.copyMode || 'full';
+      const isM3OrTransport =
+        targetRow.unit === 'M3' ||
+        targetRow.unit === 'M3-KM' ||
+        targetRow.unit === 'M3-M' ||
+        targetRow.unit === 'M3X50' ||
+        targetRow.unit === 'TON-KM';
+
+      let updatedRow = { ...targetRow };
+
+      if (copyMode === 'description' || copyMode === 'full') {
+        if (copiedData.description) updatedRow.description = copiedData.description;
+        if (copiedData.cod_par) updatedRow.cod_par = copiedData.cod_par;
+        if (copiedData.unit && copyMode === 'full') updatedRow.unit = copiedData.unit;
+      }
+
+      if (copyMode === 'measurements' || copyMode === 'full') {
+        if (Array.isArray(copiedData.partials) && copiedData.partials.length > 0) {
+          const clonedPartials = copiedData.partials.map((p, pIdx) => ({
+            ...p,
+            id: newId(`part-${pIdx}`),
+            m3: isM3OrTransport && p.m3 !== '' && p.m3 != null ? p.m3 : '',
+          }));
+          updatedRow.partials = clonedPartials;
+          updatedRow.linkedTo = null;
+          updatedRow = recomputeItemWithPartials(updatedRow);
+        } else {
+          updatedRow.partials = null;
+          updatedRow.length = copiedData.length ?? '';
+          updatedRow.width = copiedData.width ?? '';
+          updatedRow.height = copiedData.height ?? '';
+          updatedRow.times = copiedData.times ?? 1;
+          updatedRow.factor = copiedData.factor ?? '';
+          updatedRow.distance = copiedData.distance ?? '';
+          updatedRow.m3 = isM3OrTransport ? (copiedData.m3 ?? '') : '';
+          updatedRow.geometryType = copiedData.geometryType || updatedRow.geometryType;
+          updatedRow = recomputeRow(updatedRow);
+        }
+      }
+
+      const nextRows = [...rows];
+      nextRows[targetIndex] = updatedRow;
+      const withLinks = applyReactiveLinks(nextRows);
+
+      return {
+        ...state,
+        activeChapter,
+        rows: normalizeRowsWithSingleTrailingBlank(withLinks, activeChapter),
+      };
+    }
+
     case 'REPLACE_MACRO_ROWS': {
       const incoming = Array.isArray(payload.rows) ? payload.rows : [];
       const base = rows.filter(

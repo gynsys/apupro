@@ -113,4 +113,24 @@ Pared de bloque 15cm\tM2\t12\t2,8\t\t1`;
     expect(rows[0].unit).toBe('M2');
     expect(rows[0].quantity).toBe(42);
   });
+
+  it('agrupa sub-parciales en una sola partida y no genera 7 partidas independientes', () => {
+    const parentWithPartials = `N°\tDESCRIPCIÓN\tUND\tLARGO\tANCHO\tALTO\tVECES\tFACTOR\tDISTANCIA\tM3\tTOTAL\tOBSERVACIONES
+7\tREMOCION DE REJAS METALICAS\tM2\t\t\t\t1\t1,000\t\t\t80,87\tFachada
+7.1\t↳ Parcial 1\tM2\t1,40\t2,43\t\t2\t1,000\t\t\t6,80\tSemi piso
+7.2\t↳ Parcial 2\tM2\t0,80\t1,90\t\t-1\t1,000\t\t\t-1,52\tPuerta piscina
+7.3\t↳ Parcial 3\tM2\t7,38\t\t0,62\t1\t1,000\t\t\t4,58\tFachada posterior
+7.4\t↳ Parcial 4\tM2\t2,49\t2,33\t1,38\t1\t1,000\t\t\t3,33\tSalon usos multiples
+7.5\t↳ Viene de REMOCION DE VENTANAS\tM2\t\t\t\t1\t1,000\t\t\t66,30\tVinculado
+7.6\t↳ Parcial 6\tM2\t2,13\t0,65\t\t1\t1,000\t\t\t1,38\tPasillo`;
+
+    const { rows } = parseTabularComputosClipboard(parentWithPartials, 'GENERAL');
+    expect(rows.length).toBe(1);
+    expect(rows[0].description).toBe('REMOCION DE REJAS METALICAS');
+    expect(rows[0].unit).toBe('M2');
+    expect(rows[0].partials).toHaveLength(6);
+    // Para M2, m3 debe estar limpio (sin 2.95 u otros números)
+    expect(rows[0].m3).toBeFalsy();
+    expect(rows[0].partials[5].m3).toBeFalsy();
+  });
 });

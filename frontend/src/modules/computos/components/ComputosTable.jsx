@@ -43,15 +43,22 @@ export default function ComputosTable({
   handleUpdateItemField,
   handleUpdatePartialField,
   setDescriptionFilter,
-  selectedRowIds,
-  onToggleSelectRow,
-  onSelectAllRows,
+  selectedMeasurementIds = new Set(),
+  onToggleSelectMeasurement,
+  selectedDescriptionIds = new Set(),
+  onToggleSelectDescription,
+  onSelectAllMeasurements,
+  onSelectAllDescriptions,
+  activeRowId,
+  onSetActiveRow,
   onCopySelected,
+  onPasteSelected,
   onClearSelection,
   onOpenPasteModal,
 }) {
   const validItems = filteredCapturedItems.filter((r) => !isItemEmpty(r));
-  const allSelected = validItems.length > 0 && validItems.every((r) => selectedRowIds?.has(r.id));
+  const allMeasurementsSelected = validItems.length > 0 && validItems.every((r) => selectedMeasurementIds?.has(r.id));
+  const allDescriptionsSelected = validItems.length > 0 && validItems.every((r) => selectedDescriptionIds?.has(r.id));
 
   return (
 <div className="flex-1 min-h-0 bg-white border-2 border-gray-400 rounded-2xl shadow-md overflow-hidden flex flex-col">
@@ -59,21 +66,30 @@ export default function ComputosTable({
                   <table className="w-full text-xs text-left border-collapse border border-gray-400 min-w-[1100px]">
                   <thead className="sticky top-0 z-20 shadow-xs">
                     <tr className="bg-amber-200 text-amber-950 font-black uppercase border-b border-gray-400 text-center text-[11px] tracking-wide">
-                      <th rowSpan={2} className="border border-gray-400 px-1 py-1 w-14 bg-amber-300 text-center select-none" title="Seleccionar/sombrear todas las filas">
+                      <th rowSpan={2} className="border border-gray-400 px-1 py-1 w-14 bg-amber-300 text-center select-none" title="Seleccionar/sombrear mediciones de todas las filas">
                         <div className="flex flex-col items-center justify-center gap-0.5">
                           <input
                             type="checkbox"
-                            checked={allSelected}
-                            onChange={(e) => onSelectAllRows?.(e.target.checked)}
+                            checked={allMeasurementsSelected}
+                            onChange={(e) => onSelectAllMeasurements?.(e.target.checked)}
                             className="w-3.5 h-3.5 text-amber-800 rounded border-amber-500 cursor-pointer"
-                            title={allSelected ? 'Deseleccionar todas' : 'Seleccionar todas las partidas'}
+                            title={allMeasurementsSelected ? 'Deseleccionar todas las medidas' : 'Seleccionar todas las medidas/parciales para copiar'}
                           />
-                          <span className="text-[9px] font-black text-amber-950">ITEM</span>
+                          <span className="text-[9px] font-black text-amber-950">MEDIDAS</span>
                         </div>
                       </th>
                       <th rowSpan={2} className="border border-gray-400 px-3 py-2 text-left min-w-[380px] sm:min-w-[460px] bg-amber-200">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="shrink-0 text-amber-950 font-black tracking-wide">DESCRIPCIÓN</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={allDescriptionsSelected}
+                              onChange={(e) => onSelectAllDescriptions?.(e.target.checked)}
+                              className="w-3.5 h-3.5 text-amber-800 rounded border-amber-500 cursor-pointer"
+                              title={allDescriptionsSelected ? 'Deseleccionar todas las descripciones' : 'Seleccionar todas las descripciones para copiar'}
+                            />
+                            <span className="text-amber-950 font-black tracking-wide">DESCRIPCIÓN</span>
+                          </div>
                           <div className="relative flex-1 max-w-[240px] sm:max-w-[280px]">
                             <Search className="w-3.5 h-3.5 text-amber-800/60 absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input
@@ -162,8 +178,12 @@ export default function ComputosTable({
                             key={it.id}
                             it={it}
                             idx={idx}
-                            isSelected={selectedRowIds?.has(it.id)}
-                            onToggleSelect={onToggleSelectRow}
+                            isMeasurementSelected={selectedMeasurementIds?.has(it.id)}
+                            onToggleSelectMeasurement={onToggleSelectMeasurement}
+                            isDescriptionSelected={selectedDescriptionIds?.has(it.id)}
+                            onToggleSelectDescription={onToggleSelectDescription}
+                            isActiveRow={activeRowId === it.id}
+                            onSetActiveRow={onSetActiveRow}
                             showChapHeader={showChapHeader}
                             isBlankTrailing={isBlankTrailing}
                             hasPartials={hasPartials}
@@ -194,22 +214,48 @@ export default function ComputosTable({
               </div>
 
               {/* BARRA FLOTANTE DE FILAS SOMBREADAS/SELECCIONADAS */}
-              {selectedRowIds && selectedRowIds.size > 0 && (
-                <div className="p-2.5 bg-amber-950 text-white flex items-center justify-between gap-3 text-xs font-bold shrink-0 shadow-lg border-t border-amber-400">
-                  <div className="flex items-center gap-2">
+              {(selectedMeasurementIds.size > 0 || selectedDescriptionIds.size > 0) && (
+                <div className="p-2.5 bg-amber-950 text-white flex items-center justify-between gap-3 text-xs font-bold shrink-0 shadow-lg border-t border-amber-400 animate-in slide-in-from-bottom-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span>{selectedRowIds.size} partida(s) sombreada(s) para copiar</span>
+                    {selectedMeasurementIds.size > 0 && (
+                      <span className="bg-amber-800/80 px-2 py-0.5 rounded text-[11px] text-amber-200">
+                        {selectedMeasurementIds.size} con medidas
+                      </span>
+                    )}
+                    {selectedDescriptionIds.size > 0 && (
+                      <span className="bg-amber-800/80 px-2 py-0.5 rounded text-[11px] text-amber-200">
+                        {selectedDescriptionIds.size} con descripción
+                      </span>
+                    )}
+                    <span className="text-amber-300">
+                      {selectedMeasurementIds.size > 0 && selectedDescriptionIds.size > 0
+                        ? 'Copia partida completa (descripción + parciales)'
+                        : selectedMeasurementIds.size > 0
+                        ? 'Copia solo mediciones/parciales'
+                        : 'Copia solo descripción'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={onCopySelected}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl font-black transition-all cursor-pointer shadow-xs"
-                      title="Copiar partidas sombreadas al portapapeles (Ctrl+C)"
+                      title="Copiar al portapapeles (Ctrl+C)"
                     >
                       <Copy size={14} />
                       <span>Copiar (Ctrl+C)</span>
                     </button>
+                    {onPasteSelected && (
+                      <button
+                        type="button"
+                        onClick={onPasteSelected}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black transition-all cursor-pointer shadow-xs"
+                        title="Pegar directamente en partida destino (Ctrl+V)"
+                      >
+                        <span>Pegar (Ctrl+V)</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={onClearSelection}

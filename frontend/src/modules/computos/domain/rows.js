@@ -146,7 +146,7 @@ function sanitizeItemDecimals(item) {
       const hasAnyM3 = sanitized.partials.some((p) => p.m3 !== '' && p.m3 != null && !isNaN(Number(p.m3)));
       if (hasAnyM3) {
         const totalM3 = round2(sanitized.partials.reduce((sum, p) => sum + (Number(p.m3) || 0), 0));
-        if (totalM3 > 0) sanitized.m3 = totalM3;
+        if (totalM3 !== 0) sanitized.m3 = totalM3;
       }
       const formulaParts = sanitized.partials
         .filter((p) => Number(p.partial) !== 0)

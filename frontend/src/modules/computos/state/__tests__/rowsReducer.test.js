@@ -363,6 +363,81 @@ describe('rowsReducer', () => {
     expect(nonBlank[2].description).toBe('Acero de refuerzo');
     expect(nonBlank[2].quantity).toBe(150);
   });
+
+  it('pega mediciones (6 parciales) en una partida destino sin alterar su descripción (PASTE_INTO_ROW)', () => {
+    const targetRow = {
+      ...createBlankRow('GENERAL'),
+      id: 'target-1',
+      cod_par: 'E.411',
+      description: 'PINTURA EN REJAS METALICAS',
+      unit: 'M2',
+      quantity: 0,
+    };
+    const state = stateWithRows([targetRow]);
+
+    const partialsData = [
+      { description: 'Parcial 1', length: 1.4, width: 2.43, times: 2, partial: 6.8 },
+      { description: 'Parcial 2', length: 0.8, width: 1.9, times: -1, partial: -1.52 },
+      { description: 'Parcial 3', length: 7.38, height: 0.62, times: 1, partial: 4.58 },
+      { description: 'Parcial 4', geometryType: 'trapezoid', length: 2.49, width: 2.33, height: 1.38, times: 1, partial: 3.33 },
+      { description: 'Parcial 5', times: 1, partial: 66.3 },
+      { description: 'Parcial 6', length: 2.13, width: 0.65, times: 1, partial: 1.38 },
+    ];
+
+    const nextState = rowsReducer(state, {
+      type: 'PASTE_INTO_ROW',
+      payload: {
+        targetItemId: 'target-1',
+        copiedData: {
+          copyMode: 'measurements',
+          partials: partialsData,
+        },
+        activeChapter: 'GENERAL',
+      },
+    });
+
+    const updated = nextState.rows.find((r) => r.id === 'target-1');
+    expect(updated.description).toBe('PINTURA EN REJAS METALICAS');
+    expect(updated.cod_par).toBe('E.411');
+    expect(updated.partials).toHaveLength(6);
+    // Para M2, m3 debe estar vacío (no números raros como 2.95)
+    expect(updated.m3).toBeFalsy();
+    // Suma de parciales: 6.8 - 1.52 + 4.58 + 3.33 + 66.3 + 1.38 = 80.87
+    expect(updated.quantity).toBe(80.87);
+  });
+
+  it('pega descripción y parciales cuando se selecciona copyMode full (PASTE_INTO_ROW)', () => {
+    const targetRow = {
+      ...createBlankRow('GENERAL'),
+      id: 'target-2',
+      description: 'PARTIDA DESTINO',
+      unit: 'UND',
+      quantity: 0,
+    };
+    const state = stateWithRows([targetRow]);
+
+    const nextState = rowsReducer(state, {
+      type: 'PASTE_INTO_ROW',
+      payload: {
+        targetItemId: 'target-2',
+        copiedData: {
+          copyMode: 'full',
+          cod_par: 'PAR-NEW',
+          description: 'NUEVA DESCRIPCIÓN COPIADA',
+          unit: 'M2',
+          partials: [{ description: 'P1', length: 10, width: 5, times: 1, partial: 50 }],
+        },
+        activeChapter: 'GENERAL',
+      },
+    });
+
+    const updated = nextState.rows.find((r) => r.id === 'target-2');
+    expect(updated.description).toBe('NUEVA DESCRIPCIÓN COPIADA');
+    expect(updated.cod_par).toBe('PAR-NEW');
+    expect(updated.unit).toBe('M2');
+    expect(updated.partials).toHaveLength(1);
+    expect(updated.quantity).toBe(50);
+  });
 });
 
 describe('selectores de filas', () => {
