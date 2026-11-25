@@ -32,6 +32,7 @@ from .helpers import (
     ensure_budget_performance_indexes,
     ensure_budget_share_columns,
     seed_example_budget_for_user,
+    seed_ukatira_budget_for_user,
     get_example_budget_demo_payload,
 )
 
@@ -100,6 +101,9 @@ def get_budgets(
     count_existing = db.query(Budget).filter(Budget.user_id == user_id_str).count()
     if count_existing == 0:
         seed_example_budget_for_user(db, current_user.id)
+
+    # Asegurar que el presupuesto de Ukatira Ina con Cronograma General esté disponible para el usuario
+    seed_ukatira_budget_for_user(db, current_user.id)
 
     eager_options = (
         selectinload(Budget.items).selectinload(BudgetItem.materials),

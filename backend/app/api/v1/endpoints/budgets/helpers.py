@@ -3,6 +3,8 @@ Helper utilities and database checks for budget endpoints.
 """
 import json
 import math
+import uuid
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException
@@ -10,6 +12,7 @@ from sqlalchemy import text, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.logging import logger
+from app.db.base import Base
 from app.db.models.backup_logs import BackupLog
 from app.db.models.budget import (
     Budget,
@@ -18,6 +21,7 @@ from app.db.models.budget import (
     BudgetAPUEquipment as DBEquipment,
     BudgetAPULabor as DBLabor,
 )
+from app.modules.control_obra.models import ControlObraPlan
 
 _BUDGET_INDEXES_ENSURED: bool = False
 
@@ -402,6 +406,210 @@ def seed_example_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
         return None
 
     return None
+
+
+UKATIRA_BUDGET_NAME: str = "REHABILITACIÓN INTEGRAL DE LAS INSTALACIONES DE LA CASA DE ABRIGO “UKATIRA INA”"
+
+
+def seed_ukatira_budget_for_user(db: Session, target_user_id: Any) -> Optional[Budget]:
+    """
+    Asegura que el presupuesto de la obra 'UKATIRA INA' exista para el usuario con sus 11 capítulos,
+    174 partidas y programación semanal en ControlObraPlan según el cronograma general.
+    """
+    if target_user_id is None:
+        return None
+    target_user_id_str: str = str(target_user_id).strip()
+    if not target_user_id_str:
+        return None
+
+    try:
+        # Cargar fixture JSON oficial
+        fixture_path: Path = (
+            Path(__file__).resolve().parents[4]
+            / "modules"
+            / "control_obra"
+            / "fixtures"
+            / "ukatira_budget.json"
+        )
+        if not fixture_path.exists():
+            logger.error("Fixture no encontrada en %s", fixture_path)
+            return None
+
+        with open(fixture_path, "r", encoding="utf-8") as f:
+            data: Dict[str, Any] = json.load(f)
+
+        start_date_val: date = date.fromisoformat(data.get("start_date", "2026-10-22"))
+        end_date_val: date = date.fromisoformat(data.get("end_date", "2027-01-22"))
+        total_weeks_val: int = int(data.get("total_weeks", 13))
+
+        item_lookup: Dict[str, Dict[str, Any]] = {
+            it.get("code"): it for it in data.get("items", []) if it.get("code")
+        }
+        desc_lookup: Dict[str, Dict[str, Any]] = {
+            it.get("description"): it for it in data.get("items", []) if it.get("description")
+        }
+
+        # Verificar si el usuario ya tiene este presupuesto
+        existing: Optional[Budget] = (
+            db.query(Budget)
+            .filter(
+                Budget.user_id == target_user_id_str,
+                Budget.name == UKATIRA_BUDGET_NAME,
+            )
+            .first()
+        )
+
+        budget: Budget
+        if existing:
+            budget = existing
+            plan_count: int = (
+                db.query(ControlObraPlan)
+                .filter(ControlObraPlan.budget_id == existing.id)
+                .count()
+            )
+            if plan_count == 0 and existing.items:
+                for bi in existing.items:
+                    if bi.is_chapter:
+                        continue
+                    match = item_lookup.get(bi.cov_par) or item_lookup.get(bi.cod_par) or desc_lookup.get(bi.description)
+                    if match:
+                        s_ini: int = int(match.get("start_week", 1))
+                        s_fin: int = int(match.get("end_week", 13))
+                        p_start: date = start_date_val + timedelta(days=7 * (s_ini - 1))
+                        p_end: date = end_date_val if s_fin >= total_weeks_val else start_date_val + timedelta(days=7 * s_fin - 1)
+                        db.add(ControlObraPlan(
+                            id=str(uuid.uuid4()),
+                            budget_id=existing.id,
+                            budget_item_id=bi.id,
+                            planned_start=p_start,
+                            planned_end=p_end,
+                        ))
+                db.commit()
+                db.refresh(existing)
+        else:
+            budget = Budget(
+                id=str(uuid.uuid4()),
+                user_id=target_user_id_str,
+                name=UKATIRA_BUDGET_NAME,
+                description="Presupuesto base y programación según cronograma general Constructora Truckers C.A.",
+                client_name=data.get("client_name", "Fundación Venezuela Renace"),
+                company_name=data.get("company_name", "CONSTRUCTORA TRUCKERS C.A."),
+                project_name=data.get("project_name", "CASA DE ABRIGO UKATIRA INA"),
+                ubicacion=data.get("ubicacion", "Parroquia Caraballeda, Estado La Guaira"),
+                currency=data.get("currency", "USD"),
+                exchange_rate=float(data.get("exchange_rate", 1.0)),
+                fcas_percent=0.0,
+                admin_percent=0.0,
+                profit_percent=0.0,
+                iva_percent=float(data.get("iva_percent", 16.0)),
+            )
+            db.add(budget)
+            db.flush()
+
+            order_cursor: int = 1
+            items_by_chapter: Dict[str, List[Dict[str, Any]]] = {}
+            for it in data.get("items", []):
+                items_by_chapter.setdefault(it.get("chapter", "General"), []).append(it)
+
+            for chap_name in data.get("chapters", []):
+                chap_item = BudgetItem(
+                    id=str(uuid.uuid4()),
+                    budget_id=budget.id,
+                    cod_par=f"CAP-{order_cursor:02d}",
+                    cov_par=None,
+                    description=chap_name,
+                    unit="CAP",
+                    quantity=0.0,
+                    performance=1.0,
+                    order=order_cursor,
+                    is_chapter=True,
+                )
+                db.add(chap_item)
+                order_cursor += 1
+
+                for it in items_by_chapter.get(chap_name, []):
+                    db_item = BudgetItem(
+                        id=str(uuid.uuid4()),
+                        budget_id=budget.id,
+                        cod_par=str(it.get("code") or f"P{order_cursor}").strip(),
+                        cov_par=str(it.get("code") or "").strip() or None,
+                        description=str(it.get("description") or "").strip(),
+                        unit=str(it.get("unit") or "UND").strip(),
+                        quantity=float(it.get("quantity", 0.0)),
+                        performance=1.0,
+                        order=order_cursor,
+                        is_chapter=False,
+                    )
+                    db.add(db_item)
+                    db.flush()
+
+                    mat = DBMaterial(
+                        id=str(uuid.uuid4()),
+                        budget_item_id=db_item.id,
+                        codigo="MAT-01",
+                        descripcion="Insumo representativo partida",
+                        unidad="GLB",
+                        precio_unitario=float(it.get("unit_price", 0.0)),
+                        cantidad=1.0,
+                        desperdicio=0.0,
+                    )
+                    db.add(mat)
+
+                    s_ini_it: int = int(it.get("start_week", 1))
+                    s_fin_it: int = int(it.get("end_week", 13))
+                    p_start_it: date = start_date_val + timedelta(days=7 * (s_ini_it - 1))
+                    p_end_it: date = end_date_val if s_fin_it >= total_weeks_val else start_date_val + timedelta(days=7 * s_fin_it - 1)
+
+                    plan = ControlObraPlan(
+                        id=str(uuid.uuid4()),
+                        budget_id=budget.id,
+                        budget_item_id=db_item.id,
+                        planned_start=p_start_it,
+                        planned_end=p_end_it,
+                    )
+                    db.add(plan)
+                    order_cursor += 1
+
+            db.commit()
+            db.refresh(budget)
+            logger.info("Presupuesto Ukatira Ina creado exitosamente para usuario %s", target_user_id_str)
+
+        # También verificar si existen otros presupuestos Ukatira del usuario que necesiten enlazar ControlObraPlan
+        other_budgets: List[Budget] = (
+            db.query(Budget)
+            .filter(
+                Budget.user_id == target_user_id_str,
+                Budget.name.ilike("%UKATIRA INA%"),
+                Budget.id != budget.id,
+            )
+            .all()
+        )
+        for ob in other_budgets:
+            ob_plan_count = db.query(ControlObraPlan).filter(ControlObraPlan.budget_id == ob.id).count()
+            if ob_plan_count == 0 and ob.items:
+                for bi in ob.items:
+                    if bi.is_chapter:
+                        continue
+                    m = item_lookup.get(bi.cov_par) or item_lookup.get(bi.cod_par) or desc_lookup.get(bi.description)
+                    if m:
+                        s_i: int = int(m.get("start_week", 1))
+                        s_f: int = int(m.get("end_week", 13))
+                        p_s: date = start_date_val + timedelta(days=7 * (s_i - 1))
+                        p_e: date = end_date_val if s_f >= total_weeks_val else start_date_val + timedelta(days=7 * s_f - 1)
+                        db.add(ControlObraPlan(
+                            id=str(uuid.uuid4()),
+                            budget_id=ob.id,
+                            budget_item_id=bi.id,
+                            planned_start=p_s,
+                            planned_end=p_e,
+                        ))
+                db.commit()
+
+        return budget
+    except Exception as e:
+        db.rollback()
+        logger.error("Error sembrando presupuesto Ukatira Ina para %s: %s", target_user_id, e, exc_info=True)
+        return None
 
 
 def get_example_budget_demo_payload(db: Session) -> Dict[str, Any]:
