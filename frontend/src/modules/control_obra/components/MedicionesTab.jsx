@@ -1,43 +1,92 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useReducer, useRef, useMemo, useCallback } from 'react';
 import {
   Save,
-  Search,
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Layers,
-  Calculator,
-  RefreshCw,
+  RotateCcw,
+  Undo2,
+  Redo2,
   FileSpreadsheet,
   CheckCircle2,
-  Info,
+  Layers,
+  LayoutGrid,
+  Table as TableIcon,
+  Loader2,
   Calendar,
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { controlObraService } from '../controlObraService';
-import {
-  GEOMETRY_CONFIGS,
-  GEOMETRY_TYPES,
-  getDefaultGeometryType,
-  computeGeometryBase,
-} from '../../computos/domain/geometry.js';
-import { round2 } from '../../computos/domain/formulas.js';
+import ComputosSheet from '../../computos/components/ComputosSheet.jsx';
+import { createRowsState, rowsReducer } from '../../computos/state/rowsReducer.js';
+import { createBlankRow, isItemEmpty, normalizeRowsWithSingleTrailingBlank } from '../../computos/domain/rows.js';
+import { round2, cleanFormulaDisplay } from '../../computos/domain/formulas.js';
+import LinkPartidaModal from '../../computos/components/modals/LinkPartidaModal.jsx';
+import StirrupCalculatorModal from '../../computos/components/modals/StirrupCalculatorModal.jsx';
+import { AddChapterModal, RenameChapterModal } from '../../computos/components/ChapterModals.jsx';
 
-const STORAGE_PREFIX = 'control_obra_mediciones_v1_';
+const today = () => new Date().toISOString().slice(0, 10);
 
-function parseNum(val) {
-  if (val === null || val === undefined || val === '') return null;
-  const n = parseFloat(String(val).replace(',', '.'));
-  return isNaN(n) ? null : n;
+function escapeHtml(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
-function money(val, currency = 'USD') {
-  return `${currency === 'USD' ? '$' : 'Bs.'} ${Number(val || 0).toLocaleString('es-VE', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+function buildRowsFromBudgetItems(budgetItems, savedRows = null) {
+  if (!budgetItems || budgetItems.length === 0) {
+    return [createBlankRow('GENERAL')];
+  }
+
+  const savedMap = new Map();
+  if (Array.isArray(savedRows)) {
+    savedRows.forEach((r) => {
+      if (r && r.item_id) savedMap.set(r.item_id, r);
+    });
+  }
+
+  const firstChap = budgetItems[0]?.chapter || 'GENERAL';
+
+  const rows = budgetItems.map((it, idx) => {
+    const saved = savedMap.get(it.item_id);
+    if (saved) {
+      return {
+        ...saved,
+        item_id: it.item_id,
+        cod_par: it.code || saved.cod_par || '',
+        cov_par: it.code || saved.cov_par || '',
+        description: it.description || saved.description || '',
+        unit: (it.unit || saved.unit || 'UND').toUpperCase(),
+        chapter: it.chapter || saved.chapter || 'GENERAL',
+        unit_price: Number(it.unit_price || 0),
+        budget_quantity: Number(it.current_quantity || it.original_quantity || 0),
+        budget_hours: Number(it.budget_hours || 0),
+      };
+    }
+
+    const chap = it.chapter || 'GENERAL';
+    const base = createBlankRow(chap);
+    return {
+      ...base,
+      id: `item-${it.item_id || idx}`,
+      item_id: it.item_id,
+      cod_par: it.code || '',
+      cov_par: it.code || '',
+      description: it.description || '',
+      unit: (it.unit || 'UND').toUpperCase(),
+      chapter: chap,
+      quantity: Number(it.executed_quantity || 0),
+      partial: 0,
+      unit_price: Number(it.unit_price || 0),
+      budget_quantity: Number(it.current_quantity || it.original_quantity || 0),
+      budget_hours: Number(it.budget_hours || 0),
+      isDefaultQty: false,
+    };
+  });
+
+  return normalizeRowsWithSingleTrailingBlank(rows, firstChap);
 }
 
 export default function MedicionesTab({
@@ -49,617 +98,743 @@ export default function MedicionesTab({
   onMeasurementsSaved,
   onCascadeUpdate,
 }) {
-  const [search, setSearch] = useState('');
-  const [selectedChapter, setSelectedChapter] = useState('ALL');
-  const [measurementDate, setMeasurementDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [descriptionFilter, setDescriptionFilter] = useState('');
+  const [viewMode, setViewMode] = useState('table');
+  const [expandedPartials, setExpandedPartials] = useState({});
+  const [measurementDate, setMeasurementDate] = useState(today());
   const [isSaving, setIsSaving] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Estado de mediciones por partida: { [itemId]: { quantity: number, hasPartials: boolean, partials: [] } }
-  const [measurements, setMeasurements] = useState({});
-  const [expandedItems, setExpandedItems] = useState(new Set());
+  // Modales
+  const [linkModalItem, setLinkModalItem] = useState(null);
+  const [stirrupModalTarget, setStirrupModalTarget] = useState(null);
+  const [showAddChapterModal, setShowAddChapterModal] = useState(false);
+  const [chapterModalInput, setChapterModalInput] = useState('');
+  const [renameChapterTarget, setRenameChapterTarget] = useState(null);
 
-  // Extraer lista única de capítulos
-  const chapters = useMemo(() => {
-    const set = new Set();
-    items.forEach((it) => {
-      if (it.chapter) set.add(it.chapter);
-    });
-    return Array.from(set);
-  }, [items]);
-
-  // Cargar estado inicial desde localStorage o desde items existentes
-  useEffect(() => {
-    if (!budgetId || !items.length) return;
-
+  // Inicializar estado del reducer con partidas del presupuesto y borrador local previo
+  const [rowsState, rowsDispatch] = useReducer(rowsReducer, null, () => {
     let saved = null;
     try {
-      const raw = localStorage.getItem(`${STORAGE_PREFIX}${budgetId}`);
-      if (raw) saved = JSON.parse(raw);
-    } catch (_err) {
+      if (typeof window !== 'undefined' && window.localStorage && budgetId) {
+        const raw = window.localStorage.getItem(`control_obra_mediciones_${budgetId}`);
+        if (raw) saved = JSON.parse(raw);
+      }
+    } catch (_e) {
       saved = null;
     }
+    const initialRows = buildRowsFromBudgetItems(items, saved);
+    const activeChap = items[0]?.chapter || 'GENERAL';
+    return createRowsState(initialRows, activeChap);
+  });
 
-    const initial = {};
-    const initialExpanded = new Set();
+  const activeChapter = rowsState.activeChapter || items[0]?.chapter || 'GENERAL';
+  const capturedItems = rowsState.rows;
+  const canUndo = (rowsState.history?.length || 0) > 0;
+  const canRedo = (rowsState.future?.length || 0) > 0;
 
-    items.forEach((it) => {
-      const savedItem = saved?.[it.item_id];
-      if (savedItem && Array.isArray(savedItem.partials) && savedItem.partials.length > 0) {
-        initial[it.item_id] = {
-          quantity: Number(savedItem.quantity ?? it.executed_quantity ?? 0),
-          hasPartials: true,
-          partials: savedItem.partials,
-        };
-        initialExpanded.add(it.item_id);
-      } else {
-        initial[it.item_id] = {
-          quantity: Number(it.executed_quantity || 0),
-          hasPartials: false,
-          partials: [],
-        };
-      }
-    });
-
-    setMeasurements(initial);
-    setExpandedItems(initialExpanded);
-    setIsDirty(false);
-  }, [budgetId, items]);
-
-  // Recalcular un parcial específico
-  const recalcPartial = useCallback((partial, unit) => {
-    const geomType = partial.geometryType || getDefaultGeometryType(unit);
-    const { baseGeom, formulaStr } = computeGeometryBase({ ...partial, geometryType: geomType }, unit);
-    const timesVal = parseNum(partial.times) ?? 1;
-    const partialTotal = round2((baseGeom || 0) * (timesVal > 0 ? timesVal : 1));
-
-    let displayFormula = formulaStr;
-    if (timesVal !== 1 && timesVal > 0 && formulaStr) {
-      displayFormula = `${timesVal} × ${formulaStr} = ${partialTotal} ${unit}`;
-    }
-
-    return {
-      ...partial,
-      geometryType: geomType,
-      partial: partialTotal,
-      formula: displayFormula,
-    };
-  }, []);
-
-  // Agregar nuevo parcial a una partida
-  const handleAddPartial = (itemId, unit) => {
-    setMeasurements((prev) => {
-      const current = prev[itemId] || { quantity: 0, hasPartials: true, partials: [] };
-      const currentPartials = current.partials || [];
-      const newIndex = currentPartials.length + 1;
-
-      const newPartial = recalcPartial(
-        {
-          id: `p-${Date.now()}-${newIndex}`,
-          name: `Parcial ${newIndex}`,
-          times: 1,
-          length: '',
-          width: '',
-          height: '',
-          geometryType: getDefaultGeometryType(unit),
-        },
-        unit
-      );
-
-      const updatedPartials = [...currentPartials, newPartial];
-      const newTotal = round2(updatedPartials.reduce((sum, p) => sum + (Number(p.partial) || 0), 0));
-
-      return {
-        ...prev,
-        [itemId]: {
-          ...current,
-          hasPartials: true,
-          partials: updatedPartials,
-          quantity: newTotal,
-        },
-      };
-    });
-
-    setExpandedItems((prev) => new Set([...prev, itemId]));
-    setIsDirty(true);
-  };
-
-  // Actualizar un campo de un parcial
-  const handleUpdatePartial = (itemId, partialId, field, val, unit) => {
-    setMeasurements((prev) => {
-      const current = prev[itemId];
-      if (!current || !current.partials) return prev;
-
-      const updatedPartials = current.partials.map((p) => {
-        if (p.id !== partialId) return p;
-        const modified = { ...p, [field]: val };
-        return recalcPartial(modified, unit);
-      });
-
-      const newTotal = round2(updatedPartials.reduce((sum, p) => sum + (Number(p.partial) || 0), 0));
-
-      return {
-        ...prev,
-        [itemId]: {
-          ...current,
-          partials: updatedPartials,
-          quantity: newTotal,
-        },
-      };
-    });
-
-    setIsDirty(true);
-  };
-
-  // Eliminar un parcial
-  const handleRemovePartial = (itemId, partialId) => {
-    setMeasurements((prev) => {
-      const current = prev[itemId];
-      if (!current || !current.partials) return prev;
-
-      const updatedPartials = current.partials.filter((p) => p.id !== partialId);
-      const newTotal = round2(updatedPartials.reduce((sum, p) => sum + (Number(p.partial) || 0), 0));
-
-      return {
-        ...prev,
-        [itemId]: {
-          ...current,
-          hasPartials: updatedPartials.length > 0,
-          partials: updatedPartials,
-          quantity: newTotal,
-        },
-      };
-    });
-
-    setIsDirty(true);
-  };
-
-  // Actualizar cantidad directa (para partidas sin parciales)
-  const handleDirectQuantityChange = (itemId, val) => {
-    const num = parseNum(val) ?? 0;
-    setMeasurements((prev) => ({
-      ...prev,
-      [itemId]: {
-        ...(prev[itemId] || {}),
-        hasPartials: false,
-        quantity: Math.max(0, num),
-      },
-    }));
-    setIsDirty(true);
-  };
-
-  // Alternar expansión del desglose de una partida
-  const toggleExpand = (itemId) => {
-    setExpandedItems((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
-  };
-
-  // Expandir / colapsar todos
-  const toggleExpandAll = () => {
-    if (expandedItems.size > 0) {
-      setExpandedItems(new Set());
-    } else {
-      setExpandedItems(new Set(items.map((it) => it.item_id)));
-    }
-  };
-
-  // Cálculo en cascada en tiempo real de los avances del proyecto
-  const cascadeTotals = useMemo(() => {
-    let executedAmount = 0;
-    let totalBudgetHours = 0;
-    let executedHours = 0;
-
-    items.forEach((it) => {
-      const m = measurements[it.item_id];
-      const qty = m ? Number(m.quantity || 0) : Number(it.executed_quantity || 0);
-      const up = Number(it.unit_price || 0);
-      executedAmount += qty * up;
-
-      const bh = Number(it.budget_hours || 0);
-      const cq = Number(it.current_quantity || 1);
-      totalBudgetHours += bh;
-      if (cq > 0 && bh > 0) {
-        executedHours += (qty / cq) * bh;
-      }
-    });
-
-    const physicalPct = modifiedAmount > 0 ? (executedAmount / modifiedAmount) * 100 : 0;
-    const hhPct = totalBudgetHours > 0 ? (executedHours / totalBudgetHours) * 100 : 0;
-
-    return {
-      executedAmount: round2(executedAmount),
-      physicalPercent: round2(physicalPct),
-      hhPercent: round2(hhPct),
-    };
-  }, [items, measurements, modifiedAmount]);
-
-  // Notificar al componente padre de la cascada
+  // Sincronizar filas iniciales si items llega asíncronamente
+  const initializedItemsRef = useRef(false);
   useEffect(() => {
-    if (onCascadeUpdate) {
-      onCascadeUpdate(cascadeTotals);
-    }
-  }, [cascadeTotals, onCascadeUpdate]);
+    if (!items || items.length === 0 || initializedItemsRef.current) return;
 
-  // Guardar mediciones
-  const handleSave = async () => {
+    const currentItemIds = new Set(capturedItems.filter((r) => r.item_id).map((r) => r.item_id));
+    const hasItemsLoaded = items.some((it) => currentItemIds.has(it.item_id));
+
+    if (!hasItemsLoaded) {
+      let saved = null;
+      try {
+        const raw = localStorage.getItem(`control_obra_mediciones_${budgetId}`);
+        if (raw) saved = JSON.parse(raw);
+      } catch (_e) {
+        saved = null;
+      }
+      const initialRows = buildRowsFromBudgetItems(items, saved);
+      rowsDispatch({
+        type: 'SET_ROWS',
+        payload: {
+          rows: initialRows,
+          activeChapter: items[0]?.chapter || 'GENERAL',
+        },
+      });
+      initializedItemsRef.current = true;
+    }
+  }, [items, budgetId, capturedItems]);
+
+  // Recálculo en cascada automático hacia la cabecera del Control de Obra
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+
+    const itemsMap = new Map();
+    items.forEach((it) => itemsMap.set(it.item_id, it));
+
+    let totalExecutedAmount = 0;
+    let totalBudgetHours = 0;
+    let totalExecutedHours = 0;
+
+    capturedItems.forEach((row) => {
+      if (!row.item_id) return;
+      const budgetItem = itemsMap.get(row.item_id);
+      if (!budgetItem) return;
+
+      const execQty = Number(row.quantity || 0);
+      const unitPrice = Number(budgetItem.unit_price || 0);
+      const currentQty = Number(budgetItem.current_quantity || 1);
+
+      totalExecutedAmount += execQty * unitPrice;
+
+      if (budgetItem.budget_hours) {
+        totalBudgetHours += Number(budgetItem.budget_hours);
+        totalExecutedHours += Number(budgetItem.budget_hours) * (execQty / (currentQty || 1));
+      }
+    });
+
+    const physicalPercent = modifiedAmount > 0 ? (totalExecutedAmount / modifiedAmount) * 100 : 0;
+    const hhPercent = totalBudgetHours > 0 ? (totalExecutedHours / totalBudgetHours) * 100 : physicalPercent;
+
+    if (typeof onCascadeUpdate === 'function') {
+      onCascadeUpdate({
+        executedAmount: round2(totalExecutedAmount),
+        physicalPercent: round2(physicalPercent),
+        hhPercent: round2(hhPercent),
+      });
+    }
+
+    // Persistir localmente para no perder trabajo
+    const nonBlank = capturedItems.filter((r) => !isItemEmpty(r));
+    if (nonBlank.length > 0 && budgetId) {
+      try {
+        localStorage.setItem(`control_obra_mediciones_${budgetId}`, JSON.stringify(nonBlank));
+      } catch (_e) {
+        // ignore
+      }
+    }
+  }, [capturedItems, items, modifiedAmount, onCascadeUpdate, budgetId]);
+
+  // Filtrado de partidas por descripción, código o capítulo
+  const filteredCapturedItems = useMemo(() => {
+    if (!descriptionFilter.trim()) return capturedItems;
+    const q = descriptionFilter.toLowerCase().trim();
+    return capturedItems.filter((it) => {
+      if (!it.description && !it.cod_par) return false;
+      return (
+        (it.description || '').toLowerCase().includes(q) ||
+        (it.cod_par || '').toLowerCase().includes(q) ||
+        (it.chapter || '').toLowerCase().includes(q)
+      );
+    });
+  }, [capturedItems, descriptionFilter]);
+
+  // Handlers para ComputosSheet
+  const handleUpdateItemField = (itemId, field, value) => {
+    rowsDispatch({
+      type: 'UPDATE_FIELD',
+      payload: { itemId, field, value, activeChapter },
+    });
+  };
+
+  const handleUpdatePartialField = (itemId, partialId, field, value) => {
+    rowsDispatch({
+      type: 'UPDATE_PARTIAL_FIELD',
+      payload: { itemId, partialId, field, value, activeChapter },
+    });
+  };
+
+  const handleAddPartial = (itemId) => {
+    rowsDispatch({
+      type: 'ADD_PARTIAL',
+      payload: { itemId, activeChapter },
+    });
+    setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
+  };
+
+  const handleClearPartials = (itemId) => {
+    rowsDispatch({
+      type: 'CLEAR_PARTIALS',
+      payload: { itemId, activeChapter },
+    });
+  };
+
+  const handleTogglePartials = (itemId) => {
+    rowsDispatch({
+      type: 'TOGGLE_PARTIALS',
+      payload: { itemId, activeChapter },
+    });
+    setExpandedPartials((prev) => ({ ...prev, [itemId]: true }));
+  };
+
+  const handleRemovePartial = (itemId, partialId) => {
+    rowsDispatch({
+      type: 'REMOVE_PARTIAL',
+      payload: { itemId, partialId, activeChapter },
+    });
+  };
+
+  const handleToggleExpandPartials = (itemId) => {
+    setExpandedPartials((prev) => ({
+      ...prev,
+      [itemId]: !prev[itemId],
+    }));
+  };
+
+  const handleDuplicateRow = (item) => {
+    rowsDispatch({
+      type: 'DUPLICATE_ROW',
+      payload: { item, activeChapter },
+    });
+  };
+
+  const handleInsertRowBelow = (targetItem) => {
+    rowsDispatch({
+      type: 'INSERT_ROW_BELOW',
+      payload: { targetItem, activeChapter },
+    });
+  };
+
+  const handleRemoveItem = (itemId) => {
+    rowsDispatch({
+      type: 'REMOVE_ROW',
+      payload: { itemId, activeChapter },
+    });
+  };
+
+  const handleRemoveChapterHeader = (chapterName) => {
+    rowsDispatch({
+      type: 'REMOVE_CHAPTER',
+      payload: { chapterName, activeChapter },
+    });
+  };
+
+  const handleRenameChapter = (oldName) => {
+    setRenameChapterTarget(oldName);
+  };
+
+  const handleConfirmRenameChapter = (newName) => {
+    if (!renameChapterTarget || !newName) return;
+    rowsDispatch({
+      type: 'RENAME_CHAPTER',
+      payload: { oldName: renameChapterTarget, newName, activeChapter },
+    });
+    setRenameChapterTarget(null);
+  };
+
+  const handleUnlinkRow = (itemId) => {
+    rowsDispatch({
+      type: 'UNLINK_ROW',
+      payload: { itemId, activeChapter },
+    });
+  };
+
+  const handleOpenLinkModal = (item) => {
+    setLinkModalItem(item);
+  };
+
+  const handleConfirmLink = (linkData) => {
+    rowsDispatch({
+      type: 'LINK_ROWS',
+      payload: { ...linkData, activeChapter },
+    });
+    if (linkData?.targetItemId) {
+      setExpandedPartials((prev) => ({ ...prev, [linkData.targetItemId]: true }));
+    }
+    toast.success('Partida vinculada exitosamente con actualización en cascada');
+    setLinkModalItem(null);
+  };
+
+  const handleOpenStirrupModal = (item, partial = null) => {
+    setStirrupModalTarget({ item, partial });
+  };
+
+  const handleApplyStirrup = ({ cutLengthM, count, colWidthCm, colHeightCm }) => {
+    if (!stirrupModalTarget) return;
+    const { item, partial } = stirrupModalTarget;
+    if (partial) {
+      handleUpdatePartialField(item.id, partial.id, 'length', cutLengthM);
+      if (count) {
+        handleUpdatePartialField(item.id, partial.id, 'times', count);
+      }
+      const obsNote = `Estribo ${colWidthCm}x${colHeightCm}cm`;
+      const currentObs = partial.observations ? `${partial.observations} | ${obsNote}` : obsNote;
+      handleUpdatePartialField(item.id, partial.id, 'observations', currentObs);
+    } else {
+      handleUpdateItemField(item.id, 'length', cutLengthM);
+      if (count) {
+        handleUpdateItemField(item.id, 'times', count);
+      }
+      const obsNote = `Estribo ${colWidthCm}x${colHeightCm}cm`;
+      const currentObs = item.observations ? `${item.observations} | ${obsNote}` : obsNote;
+      handleUpdateItemField(item.id, 'observations', currentObs);
+    }
+    toast.success(`Estribo de corte ${cutLengthM}m aplicado correctamente`);
+    setStirrupModalTarget(null);
+  };
+
+  const handleEnrichItem = (itemId, newDescription) => {
+    handleUpdateItemField(itemId, 'description', newDescription);
+  };
+
+  const handleApplyCoveninCandidate = (itemId, candidate) => {
+    if (!candidate) return;
+    if (candidate.code) handleUpdateItemField(itemId, 'cod_par', candidate.code);
+    if (candidate.unit) handleUpdateItemField(itemId, 'unit', candidate.unit);
+  };
+
+  const handleOpenCoveninModal = () => {
+    toast('El catálogo COVENIN está disponible en la Hoja de Presupuesto.');
+  };
+
+  const handleAddMacroRows = (macroRows, meta = {}) => {
+    if (!Array.isArray(macroRows) || macroRows.length === 0) return;
+    const instanceId = meta.instanceId || `macro-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const enriched = macroRows.map((row) => ({
+      ...row,
+      macro_instance_id: instanceId,
+      macro_template_id: 'pared_perimetral',
+      macro_input: meta.input || null,
+    }));
+    rowsDispatch({
+      type: meta.instanceId ? 'REPLACE_MACRO_ROWS' : 'ADD_ROWS',
+      payload: { rows: enriched, instanceId, activeChapter },
+    });
+    toast.success(`${enriched.length} partida(s) de pared perimetral agregadas`);
+  };
+
+  const macroInstances = useMemo(() => {
+    const map = new Map();
+    capturedItems.forEach((row) => {
+      if (!row.macro_instance_id || !row.macro_input) return;
+      if (!map.has(row.macro_instance_id)) {
+        map.set(row.macro_instance_id, {
+          id: row.macro_instance_id,
+          templateId: row.macro_template_id,
+          input: row.macro_input,
+          name: row.macro_template_id === 'pared_perimetral' ? 'Pared perimetral' : 'Macro actividad',
+          rowCount: 0,
+        });
+      }
+      map.get(row.macro_instance_id).rowCount += 1;
+    });
+    return [...map.values()];
+  }, [capturedItems]);
+
+  const handleUndo = useCallback(() => {
+    if ((rowsState.history?.length || 0) === 0) return;
+    rowsDispatch({ type: 'UNDO' });
+    toast.success('Cambio deshecho');
+  }, [rowsState.history?.length]);
+
+  const handleRedo = useCallback(() => {
+    if ((rowsState.future?.length || 0) === 0) return;
+    rowsDispatch({ type: 'REDO' });
+    toast.success('Cambio rehecho');
+  }, [rowsState.future?.length]);
+
+  const handleResetToBudget = () => {
+    if (!window.confirm('¿Deseas reiniciar las mediciones con las cantidades originales del presupuesto?')) return;
+    try {
+      localStorage.removeItem(`control_obra_mediciones_${budgetId}`);
+    } catch (_e) {
+      // ignore
+    }
+    const initialRows = buildRowsFromBudgetItems(items, null);
+    rowsDispatch({
+      type: 'SET_ROWS',
+      payload: {
+        rows: initialRows,
+        activeChapter: items[0]?.chapter || 'GENERAL',
+      },
+    });
+    toast.success('Mediciones reiniciadas con valores base.');
+  };
+
+  // Guardar mediciones en backend (syncProgress) y en localStorage
+  const handleSaveMediciones = async () => {
     if (!budgetId) return;
     setIsSaving(true);
     try {
-      const syncItems = items.map((it) => ({
-        item_id: it.item_id,
-        quantity: Number(measurements[it.item_id]?.quantity ?? it.executed_quantity ?? 0),
+      const nonBlank = capturedItems.filter((r) => r.item_id && !isItemEmpty(r));
+      const syncItems = nonBlank.map((r) => ({
+        item_id: r.item_id,
+        quantity: Number(r.quantity || 0),
       }));
+
+      if (syncItems.length === 0) {
+        toast.error('No hay partidas con mediciones válidas para guardar.');
+        setIsSaving(false);
+        return;
+      }
 
       await controlObraService.syncProgress(budgetId, {
         items: syncItems,
-        entry_date: measurementDate,
-        notes: `Mediciones de obra registradas al ${measurementDate}`,
+        entry_date: measurementDate || today(),
+        notes: `Mediciones de obra actualizadas (${nonBlank.length} partidas)`,
       });
 
-      // Persistir el desglose detallado en localStorage
       try {
-        localStorage.setItem(`${STORAGE_PREFIX}${budgetId}`, JSON.stringify(measurements));
+        localStorage.setItem(`control_obra_mediciones_${budgetId}`, JSON.stringify(nonBlank));
       } catch (_e) {
         // ignore
       }
 
-      setIsDirty(false);
-      toast.success('Mediciones guardadas y avances recalculados con éxito.');
-      if (onMeasurementsSaved) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+      toast.success('¡Mediciones guardadas y avances recalculados!');
+
+      if (typeof onMeasurementsSaved === 'function') {
         await onMeasurementsSaved();
       }
     } catch (err) {
-      toast.error(err.message || 'Error al guardar las mediciones.');
+      toast.error(err.message || 'Error al guardar mediciones en Control de Obra.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Filtrado de partidas
-  const filteredItems = useMemo(() => {
-    return items.filter((it) => {
-      if (selectedChapter !== 'ALL' && it.chapter !== selectedChapter) {
-        return false;
+  // Exportar Excel nativo con soporte para transporte (Distancia, M3)
+  const handleExportExcel = () => {
+    const validItems = capturedItems.filter((it) => !isItemEmpty(it));
+    if (validItems.length === 0) {
+      toast.error('No hay partidas para exportar');
+      return;
+    }
+
+    const cleanName = (budgetName || 'Planilla_Mediciones_Control_Obra').trim().replace(/[/\\?%*:|"<>]/g, '_');
+    const todayStr = new Date().toLocaleDateString('es-VE');
+
+    let rowsHtml = '';
+    let currentChapter = null;
+    let itemNumber = 1;
+
+    validItems.forEach((it) => {
+      const chap = (it.chapter || 'GENERAL').trim().toUpperCase();
+      if (chap !== currentChapter) {
+        currentChapter = chap;
+        rowsHtml += `
+          <tr style="background-color: #fef3c7; font-weight: bold; font-size: 12px;">
+            <td colspan="12" style="padding: 8px; border: 1px solid #d97706; color: #78350f;">
+              CAPÍTULO: ${escapeHtml(chap)}
+            </td>
+          </tr>
+        `;
       }
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        const code = String(it.code || '').toLowerCase();
-        const desc = String(it.description || '').toLowerCase();
-        if (!code.includes(q) && !desc.includes(q)) return false;
+
+      const hasPartials = it.partials && it.partials.length > 0;
+      rowsHtml += `
+        <tr style="border-bottom: 1px solid #cbd5e1; font-size: 11px;">
+          <td style="text-align: center; border: 1px solid #cbd5e1; font-weight: bold; background-color: #f8fafc; vertical-align: top;">${itemNumber}</td>
+          <td style="border: 1px solid #cbd5e1; font-weight: 600; width: 500px; white-space: normal; vertical-align: top;">
+            ${escapeHtml(it.description || '')}
+            ${cleanFormulaDisplay(it.formula) ? `<br/><span style="font-family: monospace; font-size: 9px; color: #78350f; background-color: #fef3c7;">📐 ${escapeHtml(cleanFormulaDisplay(it.formula))}</span>` : ''}
+          </td>
+          <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 11px; font-weight: bold; color: #1e293b; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.length || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.width || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.height || '')}</td>
+          <td style="text-align: center; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.times || 1)}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.factor || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${hasPartials ? '—' : (it.distance || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #78350f; vertical-align: top;">${hasPartials ? (it.m3 || '—') : (it.m3 || '')}</td>
+          <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; background-color: #fef3c7; vertical-align: top;">${it.quantity || 0}</td>
+          <td style="border: 1px solid #cbd5e1; vertical-align: top;">${escapeHtml(it.observations || '')}</td>
+        </tr>
+      `;
+
+      if (hasPartials) {
+        it.partials.forEach((p, pIdx) => {
+          rowsHtml += `
+            <tr style="border-bottom: 1px dashed #cbd5e1; font-size: 10px; background-color: #fffbeb;">
+              <td style="text-align: center; border: 1px solid #cbd5e1; color: #d97706; vertical-align: top;">↳ ${pIdx + 1}</td>
+              <td style="border: 1px solid #cbd5e1; padding-left: 20px; font-style: italic; color: #78350f; width: 500px; white-space: normal; vertical-align: top;">
+                ${escapeHtml(p.description || `Parcial ${pIdx + 1}`)}
+                ${cleanFormulaDisplay(p.formula) ? `<br/><span style="font-family: monospace; font-size: 8.5px; color: #78350f; background-color: #fef3c7;">📐 ${escapeHtml(cleanFormulaDisplay(p.formula))}</span>` : ''}
+              </td>
+              <td style="text-align: center; border: 1px solid #cbd5e1; font-size: 10px; color: #64748b; vertical-align: top;">${escapeHtml(it.unit || '')}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.length || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.width || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.height || ''}</td>
+              <td style="text-align: center; border: 1px solid #cbd5e1; vertical-align: top;">${p.times || 1}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.factor || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; vertical-align: top;">${p.distance || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #78350f; vertical-align: top;">${p.m3 || ''}</td>
+              <td style="text-align: right; border: 1px solid #cbd5e1; font-weight: bold; color: #b45309; background-color: #fef3c7; vertical-align: top;">${p.partial || 0}</td>
+              <td style="border: 1px solid #cbd5e1; font-style: italic; color: #64748b; vertical-align: top;">${escapeHtml(p.observations || '')}</td>
+            </tr>
+          `;
+        });
       }
-      return true;
+
+      itemNumber += 1;
     });
-  }, [items, selectedChapter, search]);
+
+    const excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+          <style>
+            th { background-color: #d97706; color: #ffffff; border: 1px solid #b45309; padding: 6px 3px; font-size: 9px; vertical-align: middle; white-space: nowrap; text-align: center; }
+            td { padding: 5px; vertical-align: top; }
+          </style>
+        </head>
+        <body>
+          <table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
+            <tr>
+              <td colspan="12" style="font-size: 20px; font-weight: bold; text-align: center; padding: 14px 6px; color: #1e293b;">
+                Planilla de Mediciones de Obra — ${escapeHtml(budgetName || 'Control de Obra')}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="12" style="padding: 4px 6px; font-size: 11px; text-align: left; font-weight: bold; color: #1e293b;">
+                Fecha de medición: ${todayStr}
+              </td>
+            </tr>
+            <tr><td colspan="12" style="height: 8px;"></td></tr>
+            <thead>
+              <tr>
+                <th style="width: 35px;">N°</th>
+                <th style="width: 500px; text-align: left;">DESCRIPCIÓN DE LA PARTIDA</th>
+                <th style="width: 55px;">UND</th>
+                <th style="width: 75px;">LARGO</th>
+                <th style="width: 75px;">ANCHO</th>
+                <th style="width: 75px;">ALTO</th>
+                <th style="width: 65px;">VECES</th>
+                <th style="width: 75px;">FACTOR</th>
+                <th style="width: 80px;">DIST. (km)</th>
+                <th style="width: 85px;">M3 (BOTE)</th>
+                <th style="width: 85px;">CANTIDAD MEDIDA</th>
+                <th style="width: 200px; text-align: left;">OBSERVACIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${cleanName}_${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Planilla exportada a Excel');
+  };
+
+  const validItemsCount = capturedItems.filter((it) => !isItemEmpty(it)).length;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-50 overflow-hidden">
-      {/* Barra de Control Superior */}
-      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Selector de Capítulo */}
-          <select
-            value={selectedChapter}
-            onChange={(e) => setSelectedChapter(e.target.value)}
-            className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-2xs"
-          >
-            <option value="ALL">Todos los Capítulos ({items.length})</option>
-            {chapters.map((ch) => (
-              <option key={ch} value={ch}>
-                {ch}
-              </option>
-            ))}
-          </select>
-
-          {/* Buscador */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Buscar por código o texto (ej: Pintura, Marco)..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 w-52 sm:w-64 bg-white"
-            />
+    <div className="flex-1 flex flex-col min-h-0 bg-[#FEF3C7] overflow-hidden">
+      {/* BARRA DE HERRAMIENTAS Y ACCIONES DE LA PLANILLA */}
+      <div className="px-3 sm:px-6 py-2.5 bg-amber-100/90 border-b border-amber-300 flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="p-1.5 rounded-xl bg-amber-200 border border-amber-300 text-amber-900 shadow-2xs shrink-0">
+            <Layers size={18} />
           </div>
-
-          {/* Botón expandir/colapsar todos */}
-          <button
-            type="button"
-            onClick={toggleExpandAll}
-            className="px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1"
-          >
-            <Layers size={13} />
-            {expandedItems.size > 0 ? 'Colapsar todos' : 'Expandir todos'}
-          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-black text-amber-950 truncate">
+                Planilla de Cómputos y Mediciones
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-900 border border-amber-300 shadow-2xs">
+                {validItemsCount} partidas vinculadas
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-800 font-medium hidden sm:block">
+              Ingresa dimensiones, transportes (km) o desgloses. Los avances de obra se recalculan automáticamente en cascada.
+            </p>
+          </div>
         </div>
 
-        {/* Acciones y Métricas en vivo */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg">
-            <Sparkles size={14} className="text-amber-600" />
-            <span className="text-xs text-amber-900 font-bold">
-              Ejecutado: {money(cascadeTotals.executedAmount, currency)} ({cascadeTotals.physicalPercent}%)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Calendar size={14} className="text-slate-400" />
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Selector de Fecha de Corte */}
+          <div className="hidden md:flex items-center gap-1 bg-white border border-amber-300 rounded-xl px-2 py-1 shadow-2xs text-xs font-semibold text-amber-950">
+            <Calendar size={13} className="text-amber-700" />
+            <span className="text-[10px] text-amber-700 font-bold uppercase">Fecha:</span>
             <input
               type="date"
               value={measurementDate}
               onChange={(e) => setMeasurementDate(e.target.value)}
-              className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white text-slate-700"
-              title="Fecha de corte de la medición"
+              className="text-xs bg-transparent border-none focus:outline-none font-bold text-amber-950"
             />
           </div>
 
+          {/* Toggle Vista Tabla / Tarjetas */}
+          <div className="flex items-center bg-white border border-amber-300 rounded-xl p-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'table' ? 'bg-amber-300 text-amber-950 shadow-2xs' : 'text-amber-800 hover:bg-amber-50'
+              }`}
+              title="Vista de Tabla Clásica"
+            >
+              <TableIcon size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('cards')}
+              className={`p-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'cards' ? 'bg-amber-300 text-amber-950 shadow-2xs' : 'text-amber-800 hover:bg-amber-50'
+              }`}
+              title="Vista de Tarjetas / Móvil"
+            >
+              <LayoutGrid size={14} />
+            </button>
+          </div>
+
+          {/* Deshacer / Rehacer */}
           <button
             type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all shadow-xs ${
-              isDirty
-                ? 'bg-blue-600 hover:bg-blue-700 text-white animate-pulse'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-            }`}
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 disabled:opacity-40 shadow-2xs cursor-pointer"
+            title="Deshacer (Ctrl+Z)"
           >
-            {isSaving ? <RefreshCw size={13} className="animate-spin" /> : <Save size={13} />}
-            {isDirty ? 'Guardar Cambios' : 'Mediciones al Día'}
+            <Undo2 size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 disabled:opacity-40 shadow-2xs cursor-pointer"
+            title="Rehacer (Ctrl+Y)"
+          >
+            <Redo2 size={15} />
+          </button>
+
+          {/* Exportar a Excel */}
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs font-bold hover:bg-amber-50 shadow-2xs cursor-pointer"
+            title="Exportar planilla a Excel"
+          >
+            <FileSpreadsheet size={14} className="text-emerald-700" />
+            <span>Excel</span>
+          </button>
+
+          {/* Reiniciar */}
+          <button
+            type="button"
+            onClick={handleResetToBudget}
+            className="p-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-50 shadow-2xs cursor-pointer"
+            title="Restablecer mediciones"
+          >
+            <RotateCcw size={15} />
+          </button>
+
+          {/* BOTÓN PRINCIPAL: Guardar Mediciones en Control de Obra */}
+          <button
+            type="button"
+            onClick={handleSaveMediciones}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer disabled:opacity-60"
+            title="Guardar mediciones e impactar los avances de obra en el servidor"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 size={15} className="animate-spin" />
+                <span>Guardando...</span>
+              </>
+            ) : saveSuccess ? (
+              <>
+                <CheckCircle2 size={15} className="text-emerald-300 animate-pulse" />
+                <span>¡Guardado!</span>
+              </>
+            ) : (
+              <>
+                <Save size={15} />
+                <span>Guardar Mediciones</span>
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Lista de Partidas y Desglose de Cómputos */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-3">
-        {filteredItems.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
-            No se encontraron partidas que coincidan con el filtro.
-          </div>
-        ) : (
-          filteredItems.map((it, idx) => {
-            const m = measurements[it.item_id] || { quantity: it.executed_quantity || 0, partials: [] };
-            const measuredQty = Number(m.quantity || 0);
-            const currentQty = Number(it.current_quantity || 0);
-            const unitPrice = Number(it.unit_price || 0);
-            const pctVal = currentQty > 0 ? (measuredQty / currentQty) * 100 : 0;
-            const isOverContract = measuredQty > currentQty;
-            const isExpanded = expandedItems.has(it.item_id);
-            const partialsCount = (m.partials || []).length;
+      {/* COMPONENTE RECICLADO DE LA PLANILLA DE CÓMPUTOS */}
+      <ComputosSheet
+        descriptionFilter={descriptionFilter}
+        expandedPartials={expandedPartials}
+        filteredCapturedItems={filteredCapturedItems}
+        handleAddPartial={handleAddPartial}
+        handleClearPartials={handleClearPartials}
+        handleDuplicateRow={handleDuplicateRow}
+        handleEnrichItem={handleEnrichItem}
+        handleApplyCoveninCandidate={handleApplyCoveninCandidate}
+        handleInsertRowBelow={handleInsertRowBelow}
+        handleOpenCoveninModal={handleOpenCoveninModal}
+        handleOpenLinkModal={handleOpenLinkModal}
+        handleOpenStirrupModal={handleOpenStirrupModal}
+        handleRemoveChapterHeader={handleRemoveChapterHeader}
+        handleRemoveItem={handleRemoveItem}
+        handleRemovePartial={handleRemovePartial}
+        handleRenameChapter={handleRenameChapter}
+        handleToggleExpandPartials={handleToggleExpandPartials}
+        handleTogglePartials={handleTogglePartials}
+        handleUnlinkRow={handleUnlinkRow}
+        handleUpdateItemField={handleUpdateItemField}
+        handleUpdatePartialField={handleUpdatePartialField}
+        setDescriptionFilter={setDescriptionFilter}
+        viewMode={viewMode}
+        onAddMacroRows={handleAddMacroRows}
+        macroInstances={macroInstances}
+      />
 
-            return (
-              <div
-                key={it.item_id}
-                className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden transition-all hover:border-slate-300"
-              >
-                {/* Cabecera de la Partida */}
-                <div className="p-3 sm:px-4 sm:py-3 bg-white flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100">
-                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                    <span className="font-mono text-xs font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded shrink-0">
-                      {it.code || `P${idx + 1}`}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug break-words">
-                        {it.description}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-500">
-                        {it.chapter && <span className="font-medium text-slate-400">{it.chapter}</span>}
-                        <span>Contratado: <strong className="text-slate-700">{currentQty} {it.unit}</strong></span>
-                        <span>PU: <strong className="text-slate-700">{money(unitPrice, currency)}</strong></span>
-                      </div>
-                    </div>
-                  </div>
+      {/* MODALES DE SOPORTE INTEGRADOS */}
+      {linkModalItem && (
+        <LinkPartidaModal
+          isOpen={Boolean(linkModalItem)}
+          item={linkModalItem}
+          allItems={capturedItems}
+          onClose={() => setLinkModalItem(null)}
+          onConfirm={handleConfirmLink}
+        />
+      )}
 
-                  {/* Panel de Medición y Avance */}
-                  <div className="flex items-center gap-3 shrink-0 justify-between md:justify-end border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
-                    <div className="text-right">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">Medido:</span>
-                        {partialsCount > 0 ? (
-                          <span className="font-mono font-black text-sm text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                            {measuredQty} {it.unit}
-                          </span>
-                        ) : (
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={m.quantity === 0 ? '' : m.quantity}
-                            placeholder="0.00"
-                            onChange={(e) => handleDirectQuantityChange(it.item_id, e.target.value)}
-                            className="font-mono font-bold text-xs text-right w-20 px-1.5 py-1 rounded border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                          />
-                        )}
-                        <span className="text-xs font-semibold text-slate-500">{it.unit}</span>
-                      </div>
+      {stirrupModalTarget && (
+        <StirrupCalculatorModal
+          isOpen={Boolean(stirrupModalTarget)}
+          target={stirrupModalTarget}
+          onClose={() => setStirrupModalTarget(null)}
+          onApply={handleApplyStirrup}
+        />
+      )}
 
-                      <div className="flex items-center gap-2 justify-end mt-1">
-                        <span className={`text-[11px] font-bold ${isOverContract ? 'text-amber-600' : 'text-slate-600'}`}>
-                          {pctVal.toFixed(1)}%
-                        </span>
-                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${isOverContract ? 'bg-amber-500' : 'bg-blue-600'}`}
-                            style={{ width: `${Math.min(100, pctVal)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
+      {showAddChapterModal && (
+        <AddChapterModal
+          isOpen={showAddChapterModal}
+          chapterName={chapterModalInput}
+          onChange={(e) => setChapterModalInput(e.target.value)}
+          onClose={() => setShowAddChapterModal(false)}
+          onAdd={() => {
+            if (chapterModalInput.trim()) {
+              rowsDispatch({
+                type: 'ADD_ROWS',
+                payload: {
+                  rows: [createBlankRow(chapterModalInput.trim())],
+                  activeChapter: chapterModalInput.trim(),
+                },
+              });
+              setChapterModalInput('');
+              setShowAddChapterModal(false);
+              toast.success(`Capítulo "${chapterModalInput.trim()}" agregado`);
+            }
+          }}
+        />
+      )}
 
-                    {/* Botón para Desglosar / Expandir Parciales */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!isExpanded && partialsCount === 0) {
-                          handleAddPartial(it.item_id, it.unit);
-                        } else {
-                          toggleExpand(it.item_id);
-                        }
-                      }}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                        partialsCount > 0
-                          ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
-                          : 'bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 border border-slate-200'
-                      }`}
-                      title={partialsCount > 0 ? 'Ver desglose de cómputos' : 'Desglosar en filas / parciales'}
-                    >
-                      {partialsCount > 0 ? (
-                        <>
-                          <Calculator size={13} className="text-amber-700" />
-                          <span>{partialsCount} {partialsCount === 1 ? 'parcial' : 'parciales'}</span>
-                          {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                        </>
-                      ) : (
-                        <>
-                          <Plus size={13} />
-                          <span>Desglosar medidas</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tabla de Parciales / Mediciones de Campo (Estilo Planilla de Cómputos) */}
-                {isExpanded && (
-                  <div className="p-3 sm:p-4 bg-amber-50/50 border-t border-amber-200/60 space-y-2.5">
-                    <div className="flex items-center justify-between text-xs text-amber-950 font-bold px-1">
-                      <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-amber-800">
-                        <Calculator size={13} className="text-amber-700" /> Desglose de Mediciones In-Situ ({it.unit})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleAddPartial(it.item_id, it.unit)}
-                        className="flex items-center gap-1 text-xs font-extrabold text-blue-700 hover:text-blue-900 bg-white border border-blue-300 hover:bg-blue-50 px-2.5 py-1 rounded-lg shadow-2xs"
-                      >
-                        <Plus size={13} /> Agregar fila de medida
-                      </button>
-                    </div>
-
-                    <div className="overflow-x-auto rounded-xl border border-amber-200 bg-white">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-amber-100 text-amber-950 text-[11px] font-black uppercase">
-                          <tr>
-                            <th className="px-2.5 py-1.5 w-8 text-center">N°</th>
-                            <th className="px-2.5 py-1.5 min-w-[160px]">Ubicación / Tramo / Parcial</th>
-                            <th className="px-2 py-1.5 min-w-[140px]">Forma Geométrica</th>
-                            <th className="px-2 py-1.5 w-16 text-right" title="Nº de veces (permite decimales)">N° Veces</th>
-                            <th className="px-2 py-1.5 w-16 text-right">Largo (m)</th>
-                            <th className="px-2 py-1.5 w-16 text-right">Ancho (m)</th>
-                            <th className="px-2 py-1.5 w-16 text-right">Alto (m)</th>
-                            <th className="px-3 py-1.5 min-w-[180px]">Fórmula Resultante</th>
-                            <th className="px-2.5 py-1.5 w-20 text-right">Subtotal</th>
-                            <th className="px-1.5 py-1.5 w-8 text-center"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-amber-100 font-medium text-slate-700">
-                          {(m.partials || []).map((p, pIdx) => (
-                            <tr key={p.id} className="hover:bg-amber-50/60 transition-colors">
-                              <td className="px-2 py-1 text-center font-mono text-[11px] text-amber-800 font-bold">
-                                {pIdx + 1}
-                              </td>
-                              <td className="px-2 py-1">
-                                <input
-                                  type="text"
-                                  value={p.name || ''}
-                                  placeholder="Ej: Fachada norte / Eje A-B"
-                                  onChange={(e) => handleUpdatePartial(it.item_id, p.id, 'name', e.target.value, it.unit)}
-                                  className="w-full px-2 py-1 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-xs"
-                                />
-                              </td>
-                              <td className="px-2 py-1">
-                                <select
-                                  value={p.geometryType || getDefaultGeometryType(it.unit)}
-                                  onChange={(e) => handleUpdatePartial(it.item_id, p.id, 'geometryType', e.target.value, it.unit)}
-                                  className="w-full px-1.5 py-1 rounded border border-slate-200 bg-white text-[11px] font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
-                                  {GEOMETRY_CONFIGS.map((g) => (
-                                    <option key={g.id} value={g.id}>
-                                      {g.icon} {g.shortLabel}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={p.times === '' ? '' : p.times}
-                                  placeholder="1"
-                                  onChange={(e) => handleUpdatePartial(it.item_id, p.id, 'times', e.target.value, it.unit)}
-                                  className="w-full text-right px-1.5 py-1 rounded border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                              </td>
-                              <td className="px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={p.length === '' ? '' : p.length}
-                                  placeholder="0.00"
-                                  onChange={(e) => handleUpdatePartial(it.item_id, p.id, 'length', e.target.value, it.unit)}
-                                  className="w-full text-right px-1.5 py-1 rounded border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                              </td>
-                              <td className="px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={p.width === '' ? '' : p.width}
-                                  placeholder="0.00"
-                                  onChange={(e) => handleUpdatePartial(it.item_id, p.id, 'width', e.target.value, it.unit)}
-                                  className="w-full text-right px-1.5 py-1 rounded border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                              </td>
-                              <td className="px-1 py-1">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={p.height === '' ? '' : p.height}
-                                  placeholder="0.00"
-                                  onChange={(e) => handleUpdatePartial(it.item_id, p.id, 'height', e.target.value, it.unit)}
-                                  className="w-full text-right px-1.5 py-1 rounded border border-slate-200 bg-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                              </td>
-                              <td className="px-3 py-1 font-mono text-[11px] text-amber-900 bg-amber-50/30 truncate" title={p.formula}>
-                                {p.formula || '—'}
-                              </td>
-                              <td className="px-2 py-1 text-right font-mono font-bold text-xs text-slate-800">
-                                {p.partial || 0}
-                              </td>
-                              <td className="px-1 py-1 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemovePartial(it.item_id, p.id)}
-                                  className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors"
-                                  title="Eliminar parcial"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot className="bg-amber-100/70 border-t border-amber-200 text-xs font-bold text-amber-950">
-                          <tr>
-                            <td colSpan={7} className="px-3 py-1.5 text-right font-black">
-                              Total Medido ({it.description.slice(0, 30)}...):
-                            </td>
-                            <td colSpan={3} className="px-3 py-1.5 text-right font-mono font-black text-sm text-blue-800">
-                              {measuredQty} {it.unit}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+      {renameChapterTarget && (
+        <RenameChapterModal
+          isOpen={Boolean(renameChapterTarget)}
+          oldName={renameChapterTarget}
+          onClose={() => setRenameChapterTarget(null)}
+          onRename={handleConfirmRenameChapter}
+        />
+      )}
     </div>
   );
 }
