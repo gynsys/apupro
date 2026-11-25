@@ -29,6 +29,7 @@ from app.schemas.budget import (
 from .helpers import (
     get_budget_or_404,
     compute_budget_summary_metrics,
+    check_budget_has_apus,
     ensure_budget_performance_indexes,
     ensure_budget_share_columns,
     seed_example_budget_for_user,
@@ -133,8 +134,10 @@ def get_budgets(
 
     for b in budgets:
         items_count, total_amount = compute_budget_summary_metrics(b)
+        has_apus = check_budget_has_apus(b)
         setattr(b, "items_count", items_count)
         setattr(b, "total_amount", total_amount)
+        setattr(b, "has_apus", has_apus)
     return budgets
 
 

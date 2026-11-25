@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Check, Loader2, Plus, RefreshCw, X, Download, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { controlObraService } from './controlObraService';
-import BudgetFromComputosModal from '../../components/modals/BudgetFromComputosModal';
+import MedicionesTab from './components/MedicionesTab';
 import CronogramaTab from './components/CronogramaTab';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -24,7 +24,6 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
   const [periods, setPeriods] = useState([]);
   const [curveData, setCurveData] = useState([]);
   const [periodForm, setPeriodForm] = useState({ name: '', start_date: today(), end_date: today() });
-  const [showComputos, setShowComputos] = useState(false);
   const [tab, setTab] = useState('resumen');
   const [progress, setProgress] = useState({});
   const [modForm, setModForm] = useState({
@@ -213,37 +212,6 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
     }
   };
 
-  const sendComputosToPartidas = async (rows) => {
-    const items = rows
-      .map((row) => {
-        const match = data?.items?.find((item) =>
-          (row.item_id && item.item_id === row.item_id) ||
-          (!row.item_id && row.cod_par && item.code === row.cod_par)
-        );
-        return match ? { item_id: match.item_id, quantity: Number(row.quantity) } : null;
-      })
-      .filter(Boolean);
-
-    if (items.length === 0) {
-      toast.error('No se encontraron partidas del presupuesto en la planilla.');
-      return;
-    }
-
-    try {
-      await controlObraService.syncProgress(budgetId, {
-        items,
-        entry_date: today(),
-        notes: 'Sincronizado desde planilla de cómputos',
-      });
-      toast.success('Cómputos llevados a Partidas.');
-      setShowComputos(false);
-      setTab('partidas');
-      await load();
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-
   const createAddendum = async () => {
     if (!Number(addendumForm.amount)) {
       toast.error('Ingresa el monto del adendum.');
@@ -350,15 +318,15 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
             </div>
 
             <div className="px-4 sm:px-6 border-b border-slate-200 flex gap-1 overflow-x-auto bg-white shrink-0 min-h-[38px]">
-              {['resumen', 'cronograma', 'partidas', 'computos', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
-                <button key={key} onClick={() => key === 'computos' ? setShowComputos(true) : setTab(key)}
+              {['resumen', 'cronograma', 'mediciones', 'partidas', 'avances', 'modificaciones', 'adendum', 'periodos', 'curva'].map((key) => (
+                <button key={key} onClick={() => setTab(key)}
                   className={`px-3 py-2 text-xs font-semibold whitespace-nowrap rounded-t-lg ${tab === key ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}>
-                  {{ resumen: 'Resumen', cronograma: 'Cronograma', partidas: 'Partidas', computos: 'Cómputos', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
+                  {{ resumen: 'Resumen', cronograma: 'Cronograma', mediciones: 'Mediciones', partidas: 'Partidas', avances: 'Avances', modificaciones: 'Modificaciones', adendum: 'Adendum', periodos: 'Períodos', curva: 'Curva S' }[key]}
                 </button>
               ))}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 bg-slate-50">
+            <div className={`flex-1 min-h-0 ${tab === 'mediciones' ? 'flex flex-col overflow-hidden p-0' : 'overflow-y-auto p-4 sm:p-6'} bg-slate-50`}>
               {tab === 'resumen' && (
                 <div className="space-y-4">
                   <div className="bg-white rounded-xl border border-slate-200 p-4">
@@ -389,6 +357,29 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   budgetName={budgetName || data?.budget_name}
                   currency={currency}
                   onReloadSummary={load}
+                />
+              )}
+
+              {tab === 'mediciones' && (
+                <MedicionesTab
+                  budgetId={budgetId}
+                  budgetName={budgetName || data?.budget_name}
+                  items={items}
+                  currency={currency}
+                  modifiedAmount={data.modified_amount}
+                  onMeasurementsSaved={load}
+                  onCascadeUpdate={(liveTotals) => {
+                    setData((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            executed_amount: liveTotals.executedAmount,
+                            physical_percent: liveTotals.physicalPercent,
+                            physical_percent_hh: liveTotals.hhPercent,
+                          }
+                        : prev
+                    );
+                  }}
                 />
               )}
 
@@ -819,19 +810,6 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
           </>
         )}
       </div>
-
-      <BudgetFromComputosModal
-        isOpen={showComputos}
-        onClose={() => setShowComputos(false)}
-        onSendToPartidas={sendComputosToPartidas}
-        initialBudget={{
-          id: budgetId,
-          name: data?.budget_name || budgetName,
-          project_name: data?.budget_name || budgetName,
-          client_name: '',
-          items: data?.items || [],
-        }}
-      />
     </div>
   );
 }

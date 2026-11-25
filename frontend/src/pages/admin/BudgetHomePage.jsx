@@ -46,6 +46,7 @@ function buildTotalsMap(list) {
       map[b.id] = {
         items: Number(b.items_count) || 0,
         amount: Number(b.total_amount) || 0,
+        has_apus: b.has_apus !== false,
       };
     }
   }
@@ -536,12 +537,22 @@ export default function BudgetHomePage() {
                 <div className="flex flex-col gap-2 w-full min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3 w-full">
                     <div className="flex flex-col gap-0.5 min-w-0">
-                      <h3 
-                        className="tarjeta-titulo-ambar font-bold text-base text-slate-800 group-hover:text-amber-900 transition-colors break-words line-clamp-2" 
-                        title={budget.name || budget.project_name || 'Presupuesto sin título'}
-                      >
-                        {budget.name || budget.project_name || 'Presupuesto sin título'}
-                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 
+                          className="tarjeta-titulo-ambar font-bold text-base text-slate-800 group-hover:text-amber-900 transition-colors break-words line-clamp-2" 
+                          title={budget.name || budget.project_name || 'Presupuesto sin título'}
+                        >
+                          {budget.name || budget.project_name || 'Presupuesto sin título'}
+                        </h3>
+                        {(budget.has_apus === false || budgetTotals[budget.id]?.has_apus === false) && (
+                          <span 
+                            className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-md shadow-2xs shrink-0"
+                            title="Presupuesto importado sin análisis de precios unitarios desglosado"
+                          >
+                            Sin APUs
+                          </span>
+                        )}
+                      </div>
                       {budget.project_name && budget.project_name !== budget.name && (
                         <p className="text-xs text-slate-500 line-clamp-1 italic">
                           Obra: {budget.project_name}

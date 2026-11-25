@@ -192,6 +192,31 @@ def compute_budget_summary_metrics(budget: Budget) -> Tuple[int, float]:
     return items_count, total_general
 
 
+def check_budget_has_apus(budget: Budget) -> bool:
+    """
+    Verifica si el presupuesto tiene análisis de precios unitarios (APUs) reales
+    (mano de obra, equipos, o materiales detallados) o si fue importado plano 'Sin APUs'.
+    """
+    if not budget or not budget.items:
+        return True
+    non_chapters = [it for it in budget.items if not it.is_chapter]
+    if not non_chapters:
+        return True
+    for item in non_chapters:
+        has_lab = bool(item.labors and len(item.labors) > 0)
+        has_eq = bool(item.equipments and len(item.equipments) > 0)
+        has_multi_mat = bool(item.materials and len(item.materials) > 1)
+        if has_lab or has_eq or has_multi_mat:
+            return True
+        if item.materials and len(item.materials) == 1:
+            m = item.materials[0]
+            m_cod = str(m.codigo or "").strip().upper()
+            m_desc = str(m.descripcion or "").lower()
+            if m_cod not in ("MAT-01", "GEN-01") and "representativo" not in m_desc:
+                return True
+    return False
+
+
 def log_backup_action(
     db: Session,
     user_id: str,

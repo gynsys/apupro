@@ -166,6 +166,7 @@ class BudgetSummary(BudgetBase):
     updated_at: datetime
     items_count: int = 0
     total_amount: float = 0.0
+    has_apus: bool = True
     class Config:
         from_attributes = True
 
