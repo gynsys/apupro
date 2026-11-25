@@ -14,7 +14,6 @@ import PrintAPUModal from '../../../components/PrintAPUModal';
 import PrintAPULayout, { APUPrintSheet } from '../../../components/PrintAPULayout';
 import SubscriptionRequestModal from '../../../components/SubscriptionRequestModal';
 import AIApuGeneratorModal from '../../../modules/costbase/components/ai-generator/AIApuGeneratorModal';
-import ControlObraModal from '../../../modules/control_obra/ControlObraModal';
 
 import { useBudgetWorksheet } from './useBudgetWorksheet';
 import BudgetWorksheetHeader from './BudgetWorksheetHeader';
@@ -31,7 +30,6 @@ export default function BudgetWorksheetView() {
   const navigate = useNavigate();
   const [sharingItem, setSharingItem] = useState(null);
   const [showImportSharedPartida, setShowImportSharedPartida] = useState(false);
-  const [showControlObra, setShowControlObra] = useState(false);
 
   if (ws.loading || !ws.budget) {
     return (
@@ -68,14 +66,6 @@ export default function BudgetWorksheetView() {
             }}
           />
         )}
-
-        {/* CONTROL DE OBRA */}
-        <ControlObraModal
-          isOpen={showControlObra}
-          onClose={() => setShowControlObra(false)}
-          budgetId={ws.budget?.id}
-          budgetName={ws.budget?.name}
-        />
 
         {/* PRINT MODAL */}
         {ws.showPrintModal && (
@@ -236,7 +226,7 @@ export default function BudgetWorksheetView() {
                 showSettings={ws.showSettings}
                 setShowSettings={ws.setShowSettings}
                 setShowPrintModal={ws.setShowPrintModal}
-                onOpenControlObra={() => setShowControlObra(true)}
+                onOpenControlObra={() => navigate(`/budgets/${ws.budget?.id}/control-obra`)}
               />
               <BudgetWorksheetToolbar
                 onOpenSearchModal={ws.handleOpenSearchModal}

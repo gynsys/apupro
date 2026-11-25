@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Folder, FolderOpen, Plus, FileText, Trash2, Edit3, Copy, Search,
   Settings, Printer, FileSpreadsheet, CloudDownload, Upload, UploadCloud,
-  MoreVertical, Clock, DollarSign, Loader, Share2, Link2, Database
+  MoreVertical, Clock, DollarSign, Loader, Share2, Link2, Database, Activity
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { budgetService } from '../../services/budgetService';
@@ -623,6 +623,13 @@ export default function BudgetHomePage() {
                     title="Exportar a Excel"
                   >
                     <FileSpreadsheet size={18} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/budgets/${budget.id}/control-obra`); }}
+                    className="btn-accion hover:text-blue-600 transition-colors"
+                    title="Control de Obra y Cronograma"
+                  >
+                    <Activity size={18} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); if (!requireRegistration('exportar un respaldo')) return; handleBackupExport(budget); }}

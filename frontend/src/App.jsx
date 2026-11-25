@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import BudgetHomePage from './pages/admin/BudgetHomePage.jsx';
 import BudgetWorksheetPage from './pages/admin/BudgetWorksheetPage.jsx';
 import BudgetAPUEditorPage from './pages/admin/BudgetAPUEditorPage.jsx';
+import ControlObraPage from './modules/control_obra/pages/ControlObraPage.jsx';
 import CalculadoraFCASPage from './pages/tools/CalculadoraFCASPage.jsx';
 import CostbaseDashboard from './modules/costbase/pages/CostbaseDashboard.jsx';
 import APUViewer from './modules/costbase/pages/APUViewer.jsx';
@@ -165,6 +166,7 @@ function App() {
                   >
                     <Route index element={<BudgetHomePage />} />
                     <Route path=":id" element={<BudgetWorksheetPage />} />
+                    <Route path=":id/control-obra" element={<ControlObraPage />} />
                     <Route path=":id/item/:itemId" element={<BudgetAPUEditorPage />} />
                   </Route>
 
