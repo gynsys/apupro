@@ -845,35 +845,157 @@ export default function ControlObraPage() {
         )}
 
         {tab === 'curva' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs max-w-[1600px] mx-auto w-full">
-            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-blue-600" />
-              <span>Curva S: Avance Físico Programado vs. Avance Real</span>
-            </h3>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-2xs max-w-[1600px] mx-auto w-full space-y-6">
+            {/* Cabecera y Leyenda */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                  <TrendingUp size={20} className="text-blue-600" />
+                  <span>Curva S: Avance Físico Programado vs. Avance Real</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  La curva de avance real (verde) se genera automáticamente a partir de las mediciones registradas en la obra.
+                </p>
+              </div>
+
+              {/* Leyenda de la gráfica */}
+              <div className="flex items-center gap-4 text-xs font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-1 bg-blue-600 rounded-full inline-block border-t-2 border-dashed border-blue-600" />
+                  <span className="text-blue-700">Programado (Plan)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-4 h-1 bg-emerald-600 rounded-full inline-block" />
+                  <span className="text-emerald-700">Real (Mediciones)</span>
+                </div>
+              </div>
+            </div>
+
             {curveData.length === 0 ? (
-              <p className="text-xs text-slate-400">Sin datos suficientes para graficar la curva S.</p>
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                <TrendingUp size={36} className="mx-auto text-slate-400 mb-2" />
+                <p className="text-sm font-bold text-slate-700">Sin datos suficientes para graficar la curva S.</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  Asegúrate de tener fechas planificadas en la pestaña <strong>Cronograma</strong> y de guardar mediciones en la pestaña <strong>Mediciones</strong>.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-4">
-                <div className="overflow-x-auto">
+              <div className="space-y-6">
+                {/* Gráfica SVG */}
+                <div className="w-full overflow-x-auto bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
+                  <div className="min-w-[650px]">
+                    <svg viewBox="0 0 800 260" className="w-full h-64 overflow-visible">
+                      <defs>
+                        <linearGradient id="curveActualGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#059669" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#059669" stopOpacity="0.0" />
+                        </linearGradient>
+                        <linearGradient id="curvePlannedGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#2563eb" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Guías horizontales 0%, 25%, 50%, 75%, 100% */}
+                      {[0, 25, 50, 75, 100].map((v) => {
+                        const y = 220 - (v / 100) * 190;
+                        return (
+                          <g key={v}>
+                            <line x1="50" y1={y} x2="770" y2={y} stroke="#e2e8f0" strokeDasharray={v === 0 || v === 100 ? '0' : '3 3'} strokeWidth="1" />
+                            <text x="42" y={y + 4} textAnchor="end" fontSize="10" className="fill-slate-400 font-mono font-bold">
+                              {v}%
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {(() => {
+                        const n = curveData.length;
+                        const xAt = (i) => 50 + (i / Math.max(1, n - 1)) * (770 - 50);
+                        const yAt = (val) => 220 - (Math.min(100, Math.max(0, Number(val || 0))) / 100) * 190;
+
+                        const plannedPts = curveData.map((p, i) => `${xAt(i)},${yAt(p.planned_percent)}`).join(' ');
+                        const actualPts = curveData.map((p, i) => `${xAt(i)},${yAt(p.actual_percent)}`).join(' ');
+
+                        const firstX = xAt(0);
+                        const lastX = xAt(n - 1);
+                        const baselineY = yAt(0);
+                        const plannedArea = `${firstX},${baselineY} ${plannedPts} ${lastX},${baselineY}`;
+                        const actualArea = `${firstX},${baselineY} ${actualPts} ${lastX},${baselineY}`;
+
+                        return (
+                          <>
+                            {/* Áreas bajo la curva */}
+                            <polygon points={plannedArea} fill="url(#curvePlannedGradient)" />
+                            <polygon points={actualArea} fill="url(#curveActualGradient)" />
+
+                            {/* Líneas de las curvas */}
+                            <polyline fill="none" stroke="#2563eb" strokeWidth="2.5" strokeDasharray="5,4" points={plannedPts} strokeLinecap="round" />
+                            <polyline fill="none" stroke="#059669" strokeWidth="3" points={actualPts} strokeLinecap="round" />
+
+                            {/* Puntos y Etiquetas */}
+                            {curveData.map((p, i) => {
+                              const px = xAt(i);
+                              const pyPlan = yAt(p.planned_percent);
+                              const pyAct = yAt(p.actual_percent);
+                              return (
+                                <g key={p.date}>
+                                  {/* Punto Planificado */}
+                                  <circle cx={px} cy={pyPlan} r="3.5" fill="#2563eb" stroke="#ffffff" strokeWidth="1.5" />
+                                  {/* Punto Real */}
+                                  <circle cx={px} cy={pyAct} r="4" fill="#059669" stroke="#ffffff" strokeWidth="1.5" />
+
+                                  {/* Fechas en eje X */}
+                                  {(i === 0 || i === n - 1 || i % Math.ceil(n / 6) === 0) && (
+                                    <text x={px} y="242" textAnchor="middle" fontSize="10" className="fill-slate-600 font-medium">
+                                      {p.date}
+                                    </text>
+                                  )}
+                                </g>
+                              );
+                            })}
+                          </>
+                        );
+                      })()}
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Tabla Detallada de Comparación y Desviaciones */}
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="w-full text-xs">
                     <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                       <tr>
-                        <th className="p-2.5 text-left">Fecha</th>
-                        <th className="p-2.5 text-right">Avance Real (%)</th>
-                        <th className="p-2.5 text-right">Avance Programado (%)</th>
-                        <th className="p-2.5 text-right">Desviación (%)</th>
+                        <th className="p-3 text-left">Fecha de Corte</th>
+                        <th className="p-3 text-right">Avance Real Ejecutado (%)</th>
+                        <th className="p-3 text-right">Avance Programado Plan (%)</th>
+                        <th className="p-3 text-right">Desviación</th>
+                        <th className="p-3 text-center">Estado</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {curveData.map((pt, idx) => {
                         const dev = (Number(pt.actual_percent) || 0) - (Number(pt.planned_percent) || 0);
+                        const isAhead = dev > 0.05;
+                        const isBehind = dev < -0.05;
                         return (
                           <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                            <td className="p-2.5 font-medium text-slate-700">{pt.date}</td>
-                            <td className="p-2.5 text-right font-mono font-bold text-blue-700">{pct(pt.actual_percent)}</td>
-                            <td className="p-2.5 text-right font-mono font-bold text-slate-600">{pct(pt.planned_percent)}</td>
-                            <td className={`p-2.5 text-right font-mono font-bold ${dev >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <td className="p-3 font-semibold text-slate-700">{pt.date}</td>
+                            <td className="p-3 text-right font-mono font-bold text-emerald-700">{pct(pt.actual_percent)}</td>
+                            <td className="p-3 text-right font-mono font-bold text-blue-700">{pct(pt.planned_percent)}</td>
+                            <td className={`p-3 text-right font-mono font-bold ${isAhead ? 'text-emerald-600' : isBehind ? 'text-red-600' : 'text-slate-600'}`}>
                               {dev > 0 ? `+${pct(dev)}` : pct(dev)}
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isAhead
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : isBehind
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {isAhead ? 'Adelantado' : isBehind ? 'Atrasado' : 'A Tiempo'}
+                              </span>
                             </td>
                           </tr>
                         );
