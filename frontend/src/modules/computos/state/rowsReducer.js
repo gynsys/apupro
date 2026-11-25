@@ -65,6 +65,76 @@ function rowsReducerCore(state, action) {
       };
     }
 
+    case 'INSERT_ROWS_AT': {
+      const incoming = Array.isArray(payload.rows) ? payload.rows : [];
+      const targetId = payload.targetItemId;
+      const targetIndex = targetId ? rows.findIndex((r) => r.id === targetId) : -1;
+      const base = rows.filter((row, index) => !(index === rows.length - 1 && isItemEmpty(row)));
+      let nextRows;
+      if (targetIndex !== -1) {
+        nextRows = [
+          ...base.slice(0, targetIndex + 1),
+          ...incoming,
+          ...base.slice(targetIndex + 1),
+        ];
+      } else {
+        nextRows = [...base, ...incoming];
+      }
+      return {
+        ...state,
+        activeChapter,
+        rows: normalizeRowsWithSingleTrailingBlank(nextRows, activeChapter),
+      };
+    }
+
+    case 'MERGE_OR_APPEND_ROWS': {
+      const incoming = Array.isArray(payload.rows) ? payload.rows : [];
+      const base = rows.filter((row, index) => !(index === rows.length - 1 && isItemEmpty(row)));
+      const baseMap = new Map();
+      base.forEach((r, idx) => {
+        if (r.cod_par) baseMap.set(String(r.cod_par).trim().toUpperCase(), idx);
+        if (r.description) baseMap.set(String(r.description).trim().toUpperCase(), idx);
+      });
+
+      const updatedBase = [...base];
+      const newItems = [];
+
+      incoming.forEach((inRow) => {
+        const codKey = inRow.cod_par ? String(inRow.cod_par).trim().toUpperCase() : '';
+        const descKey = inRow.description ? String(inRow.description).trim().toUpperCase() : '';
+        const matchIdx =
+          (codKey && baseMap.has(codKey) ? baseMap.get(codKey) : undefined) ??
+          (descKey && baseMap.has(descKey) ? baseMap.get(descKey) : undefined);
+
+        if (matchIdx !== undefined) {
+          const existing = updatedBase[matchIdx];
+          const merged = {
+            ...existing,
+            length: inRow.length !== '' && inRow.length != null ? inRow.length : existing.length,
+            width: inRow.width !== '' && inRow.width != null ? inRow.width : existing.width,
+            height: inRow.height !== '' && inRow.height != null ? inRow.height : existing.height,
+            times: inRow.times !== '' && inRow.times != null ? inRow.times : existing.times,
+            factor: inRow.factor !== '' && inRow.factor != null ? inRow.factor : existing.factor,
+            distance: inRow.distance !== '' && inRow.distance != null ? inRow.distance : existing.distance,
+            m3: inRow.m3 !== '' && inRow.m3 != null ? inRow.m3 : existing.m3,
+            quantity: inRow.quantity !== '' && inRow.quantity != null ? inRow.quantity : existing.quantity,
+            formula: inRow.formula || existing.formula,
+            observations: inRow.observations || existing.observations,
+            partials: inRow.partials || existing.partials,
+          };
+          updatedBase[matchIdx] = recomputeRow(merged);
+        } else {
+          newItems.push(inRow);
+        }
+      });
+
+      return {
+        ...state,
+        activeChapter,
+        rows: normalizeRowsWithSingleTrailingBlank([...updatedBase, ...newItems], activeChapter),
+      };
+    }
+
     case 'REPLACE_MACRO_ROWS': {
       const incoming = Array.isArray(payload.rows) ? payload.rows : [];
       const base = rows.filter(

@@ -1408,6 +1408,24 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     setLinkModalItem(null);
   };
 
+  const handlePasteRows = (pastedRows, mode = 'append') => {
+    if (!pastedRows || pastedRows.length === 0) return;
+    isDirtyRef.current = true;
+    if (mode === 'merge') {
+      rowsDispatch({
+        type: 'MERGE_OR_APPEND_ROWS',
+        payload: { rows: pastedRows, activeChapter },
+      });
+      toast.success(`${pastedRows.length} partida(s) procesadas (actualización/anexo).`);
+    } else {
+      rowsDispatch({
+        type: 'ADD_ROWS',
+        payload: { rows: pastedRows, activeChapter },
+      });
+      toast.success(`${pastedRows.length} partida(s) pegadas.`);
+    }
+  };
+
   const handleUnlinkRow = (itemId) => {
     isDirtyRef.current = true;
     rowsDispatch({
@@ -2687,6 +2705,7 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
         viewMode={viewMode}
         onAddMacroRows={handleAddMacroRows}
         macroInstances={macroInstances}
+        onPasteRows={handlePasteRows}
       />
 
       {/* BARRA INFERIOR DE ACCIÓN (Siempre accesible en ambas vistas con botón Guardar y Generar) */}

@@ -310,6 +310,59 @@ describe('rowsReducer', () => {
     expect(switchedToM2.rows[0].unit).toBe('M2');
     expect(switchedToM2.rows[0].quantity).toBe(3.14);
   });
+
+  it('inserta múltiples filas en una posición objetivo (INSERT_ROWS_AT)', () => {
+    const row1 = { ...createBlankRow('GENERAL'), id: 'r1', description: 'Item 1' };
+    const row2 = { ...createBlankRow('GENERAL'), id: 'r2', description: 'Item 2' };
+    const state = stateWithRows([row1, row2]);
+
+    const newRows = [
+      { ...createBlankRow('GENERAL'), id: 'new-1', description: 'Insertado A' },
+      { ...createBlankRow('GENERAL'), id: 'new-2', description: 'Insertado B' },
+    ];
+
+    const nextState = rowsReducer(state, {
+      type: 'INSERT_ROWS_AT',
+      payload: { rows: newRows, targetItemId: 'r1', activeChapter: 'GENERAL' },
+    });
+
+    const nonBlank = nextState.rows.filter((r) => !isItemEmpty(r));
+    expect(nonBlank).toHaveLength(4);
+    expect(nonBlank[0].id).toBe('r1');
+    expect(nonBlank[1].id).toBe('new-1');
+    expect(nonBlank[2].id).toBe('new-2');
+    expect(nonBlank[3].id).toBe('r2');
+  });
+
+  it('combina o anexa filas coincidentes por código o descripción (MERGE_OR_APPEND_ROWS)', () => {
+    const row1 = { ...createBlankRow('GENERAL'), id: 'r1', cod_par: 'PAR-01', description: 'Pintura', length: 10, width: 2, quantity: 20 };
+    const row2 = { ...createBlankRow('GENERAL'), id: 'r2', cod_par: 'PAR-02', description: 'Concreto', quantity: 5 };
+    const state = stateWithRows([row1, row2]);
+
+    const incoming = [
+      { cod_par: 'PAR-01', description: 'Pintura', length: 25, width: 2, times: 1 },
+      { cod_par: 'PAR-03', description: 'Acero de refuerzo', unit: 'KG', quantity: 150 },
+    ];
+
+    const nextState = rowsReducer(state, {
+      type: 'MERGE_OR_APPEND_ROWS',
+      payload: { rows: incoming, activeChapter: 'GENERAL' },
+    });
+
+    const nonBlank = nextState.rows.filter((r) => !isItemEmpty(r));
+    expect(nonBlank).toHaveLength(3);
+    // PAR-01 actualizado con nueva medida length=25 y recalculado quantity=50
+    expect(nonBlank[0].cod_par).toBe('PAR-01');
+    expect(nonBlank[0].length).toBe(25);
+    expect(nonBlank[0].quantity).toBe(50);
+    // PAR-02 sin cambios
+    expect(nonBlank[1].cod_par).toBe('PAR-02');
+    expect(nonBlank[1].quantity).toBe(5);
+    // PAR-03 anexado
+    expect(nonBlank[2].cod_par).toBe('PAR-03');
+    expect(nonBlank[2].description).toBe('Acero de refuerzo');
+    expect(nonBlank[2].quantity).toBe(150);
+  });
 });
 
 describe('selectores de filas', () => {

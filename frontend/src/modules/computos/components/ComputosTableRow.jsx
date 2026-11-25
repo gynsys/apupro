@@ -48,6 +48,8 @@ function ComputosTableRow({
   isBlankTrailing,
   it,
   showChapHeader,
+  isSelected,
+  onToggleSelect,
 }) {
   const isSteel = isSteelRow(it);
   const descInputRef = useRef(null);
@@ -110,12 +112,35 @@ function ComputosTableRow({
                           )}
                           <tr
                             className={`transition-colors border-b border-gray-300 text-amber-950 ${
-                              isBlankTrailing ? 'bg-amber-50/20 hover:bg-amber-50/50' : 'hover:bg-amber-50/80'
+                              isSelected
+                                ? 'bg-amber-100 ring-2 ring-amber-400 font-semibold shadow-xs'
+                                : isBlankTrailing
+                                ? 'bg-amber-50/20 hover:bg-amber-50/50'
+                                : 'hover:bg-amber-50/80'
                             }`}
                           >
-                            {/* N° DE ITEM */}
-                            <td className="border border-gray-300 px-2 py-1 text-center font-bold text-xs bg-amber-50/40">
-                              {it.originalIndex !== undefined ? it.originalIndex + 1 : idx + 1}
+                            {/* N° DE ITEM Y CHECKBOX PARA SOMBREADO/COPIA */}
+                            <td
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleSelect?.(it.id, e.shiftKey);
+                              }}
+                              className={`border border-gray-300 px-1 py-1 text-center font-bold text-xs cursor-pointer select-none transition-colors ${
+                                isSelected ? 'bg-amber-300 text-amber-950' : 'bg-amber-50/40 hover:bg-amber-200/60 text-slate-700'
+                              }`}
+                              title="Haz clic para sombrear/seleccionar esta fila (Shift+Clic para seleccionar rango)"
+                            >
+                              <div className="flex items-center justify-center gap-1">
+                                {!isBlankTrailing && (
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(isSelected)}
+                                    onChange={() => {}}
+                                    className="w-3 h-3 text-amber-800 rounded border-amber-400 pointer-events-none"
+                                  />
+                                )}
+                                <span>{it.originalIndex !== undefined ? it.originalIndex + 1 : idx + 1}</span>
+                              </div>
                             </td>
 
                             {/* DESCRIPCIÓN */}

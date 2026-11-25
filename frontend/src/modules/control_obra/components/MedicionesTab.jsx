@@ -318,6 +318,23 @@ export default function MedicionesTab({
     setRenameChapterTarget(null);
   };
 
+  const handlePasteRows = useCallback((pastedRows, mode = 'append') => {
+    if (!pastedRows || pastedRows.length === 0) return;
+    if (mode === 'merge') {
+      rowsDispatch({
+        type: 'MERGE_OR_APPEND_ROWS',
+        payload: { rows: pastedRows, activeChapter },
+      });
+      toast.success(`${pastedRows.length} partida(s) procesadas con éxito.`);
+    } else {
+      rowsDispatch({
+        type: 'ADD_ROWS',
+        payload: { rows: pastedRows, activeChapter },
+      });
+      toast.success(`${pastedRows.length} partida(s) pegadas.`);
+    }
+  }, [activeChapter]);
+
   const handleUnlinkRow = (itemId) => {
     rowsDispatch({
       type: 'UNLINK_ROW',
@@ -782,6 +799,7 @@ export default function MedicionesTab({
         viewMode={viewMode}
         onAddMacroRows={handleAddMacroRows}
         macroInstances={macroInstances}
+        onPasteRows={handlePasteRows}
       />
 
       {/* MODALES DE SOPORTE INTEGRADOS */}
