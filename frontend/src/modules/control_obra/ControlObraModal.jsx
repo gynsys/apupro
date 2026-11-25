@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, Check, Loader2, Plus, RefreshCw, X, Download, FileSpreadsheet } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { controlObraService } from './controlObraService';
@@ -68,6 +68,25 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, budgetId]);
+
+  const handleCascadeUpdate = useCallback((liveTotals) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      if (
+        prev.executed_amount === liveTotals.executedAmount &&
+        prev.physical_percent === liveTotals.physicalPercent &&
+        prev.physical_percent_hh === liveTotals.hhPercent
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        executed_amount: liveTotals.executedAmount,
+        physical_percent: liveTotals.physicalPercent,
+        physical_percent_hh: liveTotals.hhPercent,
+      };
+    });
+  }, []);
 
   if (!isOpen) return null;
 
@@ -368,18 +387,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   currency={currency}
                   modifiedAmount={data.modified_amount}
                   onMeasurementsSaved={load}
-                  onCascadeUpdate={(liveTotals) => {
-                    setData((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            executed_amount: liveTotals.executedAmount,
-                            physical_percent: liveTotals.physicalPercent,
-                            physical_percent_hh: liveTotals.hhPercent,
-                          }
-                        : prev
-                    );
-                  }}
+                  onCascadeUpdate={handleCascadeUpdate}
                 />
               )}
 

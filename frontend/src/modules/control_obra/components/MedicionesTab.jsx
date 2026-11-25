@@ -157,9 +157,16 @@ export default function MedicionesTab({
           activeChapter: items[0]?.chapter || 'GENERAL',
         },
       });
-      initializedItemsRef.current = true;
     }
+    initializedItemsRef.current = true;
   }, [items, budgetId, capturedItems]);
+
+  // Refs para evitar bucles infinitos de renderizado con onCascadeUpdate
+  const onCascadeUpdateRef = useRef(onCascadeUpdate);
+  useEffect(() => {
+    onCascadeUpdateRef.current = onCascadeUpdate;
+  }, [onCascadeUpdate]);
+  const lastCascadeRef = useRef(null);
 
   // Recálculo en cascada automático hacia la cabecera del Control de Obra
   useEffect(() => {
@@ -192,12 +199,22 @@ export default function MedicionesTab({
     const physicalPercent = modifiedAmount > 0 ? (totalExecutedAmount / modifiedAmount) * 100 : 0;
     const hhPercent = totalBudgetHours > 0 ? (totalExecutedHours / totalBudgetHours) * 100 : physicalPercent;
 
-    if (typeof onCascadeUpdate === 'function') {
-      onCascadeUpdate({
-        executedAmount: round2(totalExecutedAmount),
-        physicalPercent: round2(physicalPercent),
-        hhPercent: round2(hhPercent),
-      });
+    const nextTotals = {
+      executedAmount: round2(totalExecutedAmount),
+      physicalPercent: round2(physicalPercent),
+      hhPercent: round2(hhPercent),
+    };
+
+    const prevTotals = lastCascadeRef.current;
+    const hasChanged =
+      !prevTotals ||
+      prevTotals.executedAmount !== nextTotals.executedAmount ||
+      prevTotals.physicalPercent !== nextTotals.physicalPercent ||
+      prevTotals.hhPercent !== nextTotals.hhPercent;
+
+    if (hasChanged && typeof onCascadeUpdateRef.current === 'function') {
+      lastCascadeRef.current = nextTotals;
+      onCascadeUpdateRef.current(nextTotals);
     }
 
     // Persistir localmente para no perder trabajo
@@ -209,7 +226,7 @@ export default function MedicionesTab({
         // ignore
       }
     }
-  }, [capturedItems, items, modifiedAmount, onCascadeUpdate, budgetId]);
+  }, [capturedItems, items, modifiedAmount, budgetId]);
 
   // Filtrado de partidas por descripción, código o capítulo
   const filteredCapturedItems = useMemo(() => {

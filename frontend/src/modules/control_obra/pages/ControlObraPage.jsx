@@ -87,6 +87,25 @@ export default function ControlObraPage() {
     load();
   }, [load]);
 
+  const handleCascadeUpdate = useCallback((liveTotals) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      if (
+        prev.executed_amount === liveTotals.executedAmount &&
+        prev.physical_percent === liveTotals.physicalPercent &&
+        prev.physical_percent_hh === liveTotals.hhPercent
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        executed_amount: liveTotals.executedAmount,
+        physical_percent: liveTotals.physicalPercent,
+        physical_percent_hh: liveTotals.hhPercent,
+      };
+    });
+  }, []);
+
   const registerProgress = async (item) => {
     const state = progress[item.item_id] || {};
     const quantity = Number(state.quantity);
@@ -486,18 +505,7 @@ export default function ControlObraPage() {
             currency={currency}
             modifiedAmount={data.modified_amount}
             onMeasurementsSaved={load}
-            onCascadeUpdate={(liveTotals) => {
-              setData((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      executed_amount: liveTotals.executedAmount,
-                      physical_percent: liveTotals.physicalPercent,
-                      physical_percent_hh: liveTotals.hhPercent,
-                    }
-                  : prev
-              );
-            }}
+            onCascadeUpdate={handleCascadeUpdate}
           />
         )}
 
