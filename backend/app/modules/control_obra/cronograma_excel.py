@@ -8,7 +8,8 @@ Replica con fidelidad el estándar de 4 hojas interconectadas dinámicamente con
 """
 from __future__ import annotations
 
-from datetime import date
+import math
+from datetime import date, timedelta
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
@@ -62,6 +63,11 @@ FMT_CURRENCY = '"$"#,##0.00'
 FMT_PERCENT = "0.00%"
 FMT_INTEGER = "#,##0"
 FMT_DATE = "YYYY-MM-DD"
+
+SPANISH_MONTHS = [
+    "", "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
 
 
 def generate_cronograma_workbook(
@@ -133,6 +139,8 @@ def generate_cronograma_workbook(
         total_weeks=total_weeks,
         start_date=start_date,
         end_date=end_date,
+        month_ranges=month_ranges,
+        week_ranges=dataset.get("week_ranges", []),
         budget_name=budget_name,
         contractor_name=contractor_name,
         contractee_name=contractee_name,
@@ -146,6 +154,7 @@ def generate_cronograma_workbook(
         items=items,
         total_weeks=total_weeks,
         month_ranges=month_ranges,
+        chapter_rows=_general_chapter_rows(chapters, items),
         start_date=start_date,
         end_date=end_date,
         budget_name=budget_name,
@@ -154,14 +163,104 @@ def generate_cronograma_workbook(
         location=location,
     )
 
-    # Ajustar anchos de columnas en todas las hojas
+    # Ajustar anchos de columnas en las hojas de detalle; las hojas ejecutivas
+    # conservan el ancho fijo del modelo.
     for ws in wb.worksheets:
-        _auto_adjust_columns(ws)
+        if ws.title not in ("Cronograma General", "Cronograma Mensual"):
+            _auto_adjust_columns(ws)
 
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
     return buffer
+
+
+def _normalize_text(value: Any) -> str:
+    text = str(value or "").upper()
+    replacements = {
+        "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": "U", "Ü": "U", "Ñ": "N",
+    }
+    for source, target in replacements.items():
+        text = text.replace(source, target)
+    return " ".join(text.split())
+
+
+_ACTIVITY_KEYWORDS = [
+    (("ESTUDIO", "GEOTECN", "PATOLOG", "VERTICAL"), "Estudios y diagnósticos"),
+    (("REPLANTEO",), "Replanteo"),
+    (("LIMPIEZA", "DESMALEZ"), "Limpieza y desmalezamiento"),
+    (("PODA", "TALA", "DESRAIZ"), "Poda y tala"),
+    (("DEMOLICION", "REMOCION", "DESMONTAJE", "APUNTALAMIENTO"), "Demoliciones y desmontajes"),
+    (("EXCAVACION",), "Excavación"),
+    (("FUNDACION", "RIOSTRA", "ZAPATA"), "Fundaciones"),
+    (("CONCRETO",), "Concreto"),
+    (("ACERO", "CABILLA", "MALLA"), "Acero de refuerzo"),
+    (("ENCOFRADO",), "Encofrado"),
+    (("PARED", "BLOQUE", "MAMPOST"), "Paredes y mampostería"),
+    (("FRISO", "REVOQUE", "ENLUCIDO", "RESANE"), "Frisos y revoques"),
+    (("PINTURA", "BARNIZ"), "Pintura"),
+    (("IMPERMEAB", "MANTO"), "Impermeabilización"),
+    (("ELECTRIC", "CABLE", "LUMINARIA", "TABLERO"), "Instalaciones eléctricas"),
+    (("SANITAR", "AGUA", "DESAG", "TUBERIA"), "Instalaciones sanitarias"),
+    (("AIRE", "CLIMAT", "SPLIT"), "Climatización"),
+    (("CCTV", "CAMARA", "SEGURIDAD"), "CCTV y seguridad"),
+    (("INCENDIO", "DETECC"), "Detección de incendios"),
+    (("PUERTA", "VENTANA", "CARPINTER"), "Carpintería y ventanería"),
+    (("TECHO", "LAMINA", "CIELO RASO"), "Techos y cielo raso"),
+    (("PISO", "CERAMICA", "GRANITO"), "Pisos y acabados"),
+    (("CARGA", "BOTE", "ESCOMBRO"), "Carga y bote"),
+]
+
+
+def _activity_name(description: str) -> str:
+    normalized = _normalize_text(description)
+    for keywords, label in _ACTIVITY_KEYWORDS:
+        if any(keyword in normalized for keyword in keywords):
+            return label
+    words = description.strip().split()
+    return " ".join(words[:6]).title() if words else "Actividades"
+
+
+def _group_chapter_items(chapter_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Agrupa partidas consecutivas en bloques de actividad para el desglose.
+
+    El modelo UKATIRA usa pocas filas de detalle por capítulo. Se conserva ese
+    nivel de detalle agrupando las partidas en bloques contiguos de tamaño
+    equilibrado, sin crear una fila por cada partida.
+    """
+    if not chapter_items:
+        return []
+
+    total = len(chapter_items)
+    target_groups = max(1, math.ceil(total / 7))
+    chunk_size = max(1, math.ceil(total / target_groups))
+    groups: List[Dict[str, Any]] = []
+
+    for start in range(0, total, chunk_size):
+        block = chapter_items[start:start + chunk_size]
+        if not block:
+            continue
+        activity_counts: Dict[str, int] = {}
+        for item in block:
+            activity = _activity_name(item.get("description", ""))
+            activity_counts[activity] = activity_counts.get(activity, 0) + 1
+        activity = max(activity_counts, key=activity_counts.get)
+        groups.append({"activity": activity, "items": block})
+    return groups
+
+
+def _general_chapter_rows(chapters: List[Dict[str, Any]], items: List[Dict[str, Any]]) -> List[int]:
+    """Devuelve la fila de cada capítulo en 'Cronograma General'."""
+    rows: List[int] = []
+    current = 10
+    for chap in chapters:
+        rows.append(current)
+        chapter_items = [
+            item for item in items
+            if _normalize_text(item.get("chapter")) == _normalize_text(chap["name"])
+        ]
+        current += 1 + len(_group_chapter_items(chapter_items))
+    return rows
 
 
 def _build_sheet_ponderacion(
@@ -190,16 +289,19 @@ def _build_sheet_ponderacion(
     ws["B4"] = "PONDERACIÓN DE CAPÍTULOS"
     ws["B4"].font = FONT_STATUS
 
+    for rng in ("B1:K1", "B2:K2", "A3:K3", "B4:K4"):
+        ws.merge_cells(rng)
+
     # Constantes globales (START, FIN, IVA)
     ws["B5"] = "Inicio de obra"
-    ws["C5"] = start_date.strftime("%Y-%m-%d")
+    ws["C5"] = start_date
     ws["C5"].alignment = ALIGN_CENTER
-    ws["C5"].number_format = FMT_DATE
+    ws["C5"].number_format = "DD/MM/YYYY"
 
     ws["B6"] = "Culminación"
-    ws["C6"] = end_date.strftime("%Y-%m-%d")
+    ws["C6"] = end_date
     ws["C6"].alignment = ALIGN_CENTER
-    ws["C6"].number_format = FMT_DATE
+    ws["C6"].number_format = "DD/MM/YYYY"
 
     ws["B7"] = "IVA"
     ws["C7"] = float(iva_rate)
@@ -345,6 +447,9 @@ def _build_sheet_partidas(
     ws["C4"] = "Presupuesto base y programación por partida"
     ws["C4"].font = FONT_STATUS
 
+    for rng in ("A1:O1", "C2:P2", "C3:O3"):
+        ws.merge_cells(rng)
+
     # Cabecera de la tabla
     base_headers = [
         "N°", "Código", "Descripción", "Und", "Cantidad",
@@ -447,24 +552,34 @@ def _build_sheet_cronograma_general(
     total_weeks: int,
     start_date: date,
     end_date: date,
+    month_ranges: List[Dict[str, Any]],
+    week_ranges: List[Any],
     budget_name: str,
     contractor_name: str,
     contractee_name: str,
     location: str,
 ) -> None:
-    ws.views.sheetView[0].showGridLines = True
+    ws.views.sheetView[0].showGridLines = False
 
     # Encabezado
     ws["A1"] = contractor_name
-    ws["A1"].font = FONT_SUBTITLE
+    ws["A1"].font = Font(name="Arial", size=16, bold=True, color="374151")
+    ws["A1"].alignment = ALIGN_CENTER
     ws["A2"] = budget_name
     ws["A2"].font = FONT_TITLE
-    ws["A3"] = f"{location} · Contratante: {contractee_name} · Contratista: {contractor_name}"
-    ws["A3"].font = FONT_DESC
+    ws["A2"].alignment = ALIGN_CENTER
+    ws["B3"] = f"{location} · Contratante: {contractee_name} · Contratista: {contractor_name}"
+    ws["B3"].font = Font(name="Arial", size=12, bold=False, color="6B7280")
+    ws["B3"].alignment = ALIGN_CENTER
 
-    status_text = f"CRONOGRAMA GENERAL DE EJECUCIÓN · Inicio {start_date.strftime('%d/%m/%Y')} · Culminación {end_date.strftime('%d/%m/%Y')} · {total_weeks} semanas"
+    status_text = f"CRONOGRAMA GENERAL DE EJECUCIÓN  ·  Inicio {start_date.strftime('%d/%m/%Y')}  ·  Culminación {end_date.strftime('%d/%m/%Y')}  ·  {total_weeks} semanas"
     ws["A4"] = status_text
     ws["A4"].font = FONT_STATUS
+    ws["A4"].alignment = ALIGN_CENTER
+
+    last_sheet_col = get_column_letter(4 + total_weeks)
+    for rng in (f"A1:{last_sheet_col}1", f"A2:{last_sheet_col}2", f"B3:{last_sheet_col}3", f"A4:{last_sheet_col}4"):
+        ws.merge_cells(rng)
 
     # Cabeceras de semanas (Filas 6 a 9)
     ws["A6"] = "N°"
@@ -472,14 +587,67 @@ def _build_sheet_cronograma_general(
     ws["C6"] = "Monto $"
     ws["D6"] = "Peso %"
 
-    for r, c in [(6, 1), (6, 3), (6, 4)]:
-        ws.cell(r, c).font = FONT_TH
-        ws.cell(r, c).fill = FILL_HEADER
-        ws.cell(r, c).alignment = ALIGN_HEADER
+    for rng in ("A6:A9", "C6:C9", "D6:D9"):
+        ws.merge_cells(rng)
 
-    ws.cell(7, 2).font = FONT_TH
-    ws.cell(7, 2).fill = FILL_HEADER
-    ws.cell(7, 2).alignment = ALIGN_LEFT
+    for row, col in ((6, 1), (7, 2), (6, 3), (6, 4)):
+        cell = ws.cell(row, col)
+        cell.font = FONT_TH
+        cell.fill = FILL_HEADER
+        cell.alignment = ALIGN_HEADER
+
+    # Banda de meses: cada semana se asigna al mes que contiene la mayoría de sus días.
+    week_end_months = []
+    for w_start, w_end in week_ranges:
+        day_counts: Dict[tuple, int] = {}
+        for offset in range((w_end - w_start).days + 1):
+            current = w_start + timedelta(days=offset)
+            key = (current.year, current.month)
+            day_counts[key] = day_counts.get(key, 0) + 1
+        week_end_months.append(max(day_counts, key=day_counts.get))
+    month_bands = []
+    for m in month_ranges:
+        indices = [
+            idx for idx, (year, month) in enumerate(week_end_months)
+            if year == m["year"] and month == m["month"]
+        ]
+        if indices:
+            month_bands.append((m, min(indices), max(indices)))
+
+    if month_bands:
+        first_band_month, _, _ = month_bands[0]
+        first_col = 5
+        first_label = first_band_month["code"].split("-")[0].upper()
+        ws.cell(6, first_col, first_label)
+        ws.cell(6, first_col).font = FONT_TH
+        ws.cell(6, first_col).fill = FILL_HEADER
+        ws.cell(6, first_col).alignment = ALIGN_HEADER
+
+        previous_end_col = first_col
+        for m, start_idx, end_idx in month_bands[1:]:
+            start_col = 5 + start_idx
+            end_col = 5 + end_idx
+            if start_col <= previous_end_col:
+                start_col = previous_end_col + 1
+            if end_col < start_col:
+                continue
+            if end_col > start_col:
+                ws.merge_cells(start_row=6, start_column=start_col, end_row=6, end_column=end_col)
+            cell = ws.cell(6, start_col, m["code"].upper())
+            cell.font = FONT_TH
+            cell.fill = FILL_HEADER
+            cell.alignment = ALIGN_HEADER
+            previous_end_col = end_col
+
+    if week_ranges:
+        first_week_start, first_week_end = week_ranges[0]
+        ws.cell(
+            8,
+            2,
+            f"Semana 1 = {first_week_start.strftime('%d')} al {first_week_end.strftime('%d')} de {SPANISH_MONTHS[first_week_end.month]} de {first_week_end.year}",
+        )
+        ws.cell(8, 2).font = FONT_DESC
+        ws.cell(8, 2).alignment = ALIGN_LEFT
 
     for w in range(1, total_weeks + 1):
         col_idx = 4 + w
@@ -492,12 +660,17 @@ def _build_sheet_cronograma_general(
         c_f_ini = ws.cell(8, col_idx, f'=START+7*({w}-1)')
         c_f_ini.alignment = ALIGN_CENTER
         c_f_ini.font = FONT_DESC
-        c_f_ini.number_format = FMT_DATE
+        c_f_ini.number_format = "DD/MM/YYYY"
 
         c_f_fin = ws.cell(9, col_idx, f'=IF({w}>={total_weeks},FIN,START+7*{w}-1)')
         c_f_fin.alignment = ALIGN_CENTER
         c_f_fin.font = FONT_DESC
-        c_f_fin.number_format = FMT_DATE
+        c_f_fin.number_format = "DD/MM/YYYY"
+
+    ws.row_dimensions[1].height = 21.75
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[3].height = 18
+    ws.row_dimensions[4].height = 18
 
     num_items = len(items)
     last_item_row = max(6, 5 + num_items)
@@ -512,23 +685,27 @@ def _build_sheet_cronograma_general(
         c_num.alignment = ALIGN_CENTER
         c_num.font = FONT_CHAPTER
         c_num.fill = FILL_CHAPTER
+        c_num.border = BORDER_THIN
 
         c_name = ws.cell(curr_row, 2, chap["name"])
         c_name.alignment = ALIGN_LEFT
         c_name.font = FONT_CHAPTER
         c_name.fill = FILL_CHAPTER
+        c_name.border = BORDER_THIN
 
         c_amt = ws.cell(curr_row, 3, f'=SUMIF(Partidas!$H$6:$H${last_item_row},B{curr_row},Partidas!$G$6:$G${last_item_row})')
         c_amt.alignment = ALIGN_RIGHT
         c_amt.font = FONT_CHAPTER
         c_amt.fill = FILL_CHAPTER
         c_amt.number_format = FMT_CURRENCY
+        c_amt.border = BORDER_THIN
 
         c_pct = ws.cell(curr_row, 4, f'=C{curr_row}/Partidas!$G${partidas_total_row}')
         c_pct.alignment = ALIGN_RIGHT
         c_pct.font = FONT_CHAPTER
         c_pct.fill = FILL_CHAPTER
         c_pct.number_format = FMT_PERCENT
+        c_pct.border = BORDER_THIN
 
         # Semanas vinculadas con SUMIF a la columna respectiva de la hoja Partidas
         for w in range(1, total_weeks + 1):
@@ -539,80 +716,141 @@ def _build_sheet_cronograma_general(
                 col_idx,
                 f'=SUMIF(Partidas!$H$6:$H${last_item_row},$B{curr_row},Partidas!{col_letter}$6:{col_letter}${last_item_row})'
             )
-            c_w.alignment = ALIGN_RIGHT
-            c_w.font = FONT_DATA
+            c_w.alignment = ALIGN_CENTER
+            c_w.font = FONT_CHAPTER
+            c_w.fill = FILL_CHAPTER
             c_w.border = BORDER_THIN
-            c_w.number_format = FMT_CURRENCY
+            c_w.number_format = ";;;"
 
         curr_row += 1
 
+        # Filas de detalle: agrupa partidas consecutivas por tipo de actividad.
+        chapter_items = [
+            item for item in items
+            if _normalize_text(item.get("chapter")) == _normalize_text(chap["name"])
+        ]
+        for group in _group_chapter_items(chapter_items):
+            group_items = group["items"]
+            first_num = min(int(item.get("num") or 0) for item in group_items)
+            last_num = max(int(item.get("num") or 0) for item in group_items)
+            range_label = str(first_num) if first_num == last_num else f"{first_num}–{last_num}"
+            detail_font = Font(name="Arial", size=10, color="111827")
+            ws.row_dimensions[curr_row].height = 25.5
+
+            ws.cell(curr_row, 1, range_label).font = detail_font
+            ws.cell(curr_row, 1).alignment = ALIGN_CENTER
+            ws.cell(curr_row, 1).border = BORDER_THIN
+
+            ws.cell(curr_row, 2, group["activity"]).font = detail_font
+            ws.cell(curr_row, 2).alignment = ALIGN_LEFT
+            ws.cell(curr_row, 2).border = BORDER_THIN
+
+            c_detail_amt = ws.cell(
+                curr_row,
+                3,
+                f'=SUMIFS(Partidas!$G$6:$G${last_item_row},Partidas!$A$6:$A${last_item_row},">="&{first_num},Partidas!$A$6:$A${last_item_row},"<="&{last_num})',
+            )
+            c_detail_amt.font = detail_font
+            c_detail_amt.alignment = ALIGN_RIGHT
+            c_detail_amt.number_format = FMT_CURRENCY
+            c_detail_amt.border = BORDER_THIN
+
+            c_detail_pct = ws.cell(curr_row, 4, f"=C{curr_row}/Partidas!$G${partidas_total_row}")
+            c_detail_pct.font = detail_font
+            c_detail_pct.alignment = ALIGN_RIGHT
+            c_detail_pct.number_format = FMT_PERCENT
+            c_detail_pct.border = BORDER_THIN
+
+            for w in range(1, total_weeks + 1):
+                col_idx = 4 + w
+                col_letter = get_column_letter(11 + w)
+                c_detail_week = ws.cell(
+                    curr_row,
+                    col_idx,
+                    f'=SUMIFS(Partidas!{col_letter}$6:{col_letter}${last_item_row},Partidas!$A$6:$A${last_item_row},">="&{first_num},Partidas!$A$6:$A${last_item_row},"<="&{last_num})',
+                )
+                c_detail_week.font = detail_font
+                c_detail_week.alignment = ALIGN_CENTER
+                c_detail_week.number_format = ";;;"
+                c_detail_week.border = BORDER_THIN
+
+            curr_row += 1
+
     end_gantt_row = curr_row - 1
 
-    # Filas de Totales y Curva S (Pie)
-    # Fila: Inversión Semanal
-    r_inv = curr_row
-    ws.cell(r_inv, 2, "INVERSIÓN SEMANAL ($)").font = FONT_TOTAL
-    ws.cell(r_inv, 3, f'=SUM(C10:C{end_gantt_row})').number_format = FMT_CURRENCY
-    ws.cell(r_inv, 4, f'=SUM(D10:D{end_gantt_row})').number_format = FMT_PERCENT
+    # Filas de control y Curva S, con el mismo orden del modelo UKATIRA.
+    footer_fill = PatternFill("solid", fgColor="E5E7EB")
+    r_fis = curr_row
+    r_fis_cum = curr_row + 1
+    r_inv = curr_row + 2
+    r_inv_cum = curr_row + 3
+
+    ws.cell(r_fis, 2, "Avance físico programado en la semana (%)")
+    ws.cell(r_fis_cum, 2, "Avance físico acumulado programado (%)")
+    ws.cell(r_inv, 2, "Inversión programada en la semana ($, sin IVA)")
+    ws.cell(r_inv_cum, 2, "Inversión acumulada ($, sin IVA)")
 
     for w in range(1, total_weeks + 1):
         col_idx = 4 + w
         col_letter = get_column_letter(col_idx)
-        c_sum = ws.cell(r_inv, col_idx, f'=SUM({col_letter}10:{col_letter}{end_gantt_row})')
-        c_sum.number_format = FMT_CURRENCY
 
-    for c_idx in range(1, 5 + total_weeks):
-        ws.cell(r_inv, c_idx).font = FONT_TOTAL
-        ws.cell(r_inv, c_idx).fill = FILL_TOTAL
-        ws.cell(r_inv, c_idx).border = BORDER_THIN
+        c_fis = ws.cell(
+            r_fis,
+            col_idx,
+            f"=Partidas!{get_column_letter(11 + w)}{partidas_total_row}/Partidas!$G${partidas_total_row}",
+        )
+        c_fis.number_format = FMT_PERCENT
 
-    # Fila: % Semanal
-    curr_row += 1
-    r_pct = curr_row
-    ws.cell(r_pct, 2, "% SEMANAL PROGRAMADO").font = FONT_DATA_BOLD
-    ws.cell(r_pct, 4, f'=D{r_inv}').number_format = FMT_PERCENT
+        c_fis_cum = ws.cell(r_fis_cum, col_idx, f"=SUM($E{r_fis}:{col_letter}{r_fis})")
+        c_fis_cum.number_format = FMT_PERCENT
 
-    for w in range(1, total_weeks + 1):
-        col_idx = 4 + w
-        col_letter = get_column_letter(col_idx)
-        c_p = ws.cell(r_pct, col_idx, f'={col_letter}{r_inv}/$C${r_inv}')
-        c_p.number_format = FMT_PERCENT
-        c_p.font = FONT_DATA_BOLD
+        c_inv = ws.cell(r_inv, col_idx, f"=Partidas!{get_column_letter(11 + w)}{partidas_total_row}")
+        c_inv.number_format = FMT_CURRENCY
 
-    for c_idx in range(1, 5 + total_weeks):
-        ws.cell(r_pct, c_idx).fill = FILL_TOTAL
-        ws.cell(r_pct, c_idx).border = BORDER_THIN
+        c_inv_cum = ws.cell(r_inv_cum, col_idx, f"=SUM($E{r_inv}:{col_letter}{r_inv})")
+        c_inv_cum.number_format = FMT_CURRENCY
 
-    # Fila: Curva S Programada (% Acumulado)
-    curr_row += 1
-    r_curva = curr_row
-    ws.cell(r_curva, 2, "CURVA S (AVANCE PROGRAMADO ACUMULADO)").font = Font(name="Arial", size=9, bold=True, color="92400E")
-    ws.cell(r_curva, 4, "100.00%").font = Font(name="Arial", size=9, bold=True, color="92400E")
-
-    start_col_letter = get_column_letter(5)
-    for w in range(1, total_weeks + 1):
-        col_idx = 4 + w
-        col_letter = get_column_letter(col_idx)
-        c_c = ws.cell(r_curva, col_idx, f'=SUM(${start_col_letter}${r_pct}:{col_letter}${r_pct})')
-        c_c.number_format = FMT_PERCENT
-        c_c.font = Font(name="Arial", size=9, bold=True, color="92400E")
-
-    for c_idx in range(1, 5 + total_weeks):
-        ws.cell(r_curva, c_idx).fill = FILL_CURVE
-        ws.cell(r_curva, c_idx).border = BORDER_TOTAL
+    for row in (r_fis, r_fis_cum, r_inv, r_inv_cum):
+        for c_idx in range(1, 5 + total_weeks):
+            cell = ws.cell(row, c_idx)
+            cell.font = FONT_DATA_BOLD
+            cell.fill = footer_fill
+            cell.border = BORDER_THIN
+            cell.alignment = ALIGN_CENTER if c_idx >= 5 else ALIGN_LEFT
 
     # Regla de Formato Condicional (Gantt visual activo)
     first_week_col = get_column_letter(5)
     last_week_col = get_column_letter(4 + total_weeks)
     gantt_range = f"{first_week_col}10:{last_week_col}{end_gantt_row}"
 
-    rule_gantt = FormulaRule(
-        formula=[f"AND({first_week_col}10>0,$A10<>'')"],
+    rule_chapter = FormulaRule(
+        formula=[f'AND({first_week_col}10>0,$A10<>"",ISNUMBER($A10))'],
         stopIfTrue=True,
-        fill=FILL_GANTT_ACTIVE,
-        font=Font(name="Arial", size=8, bold=True, color="FFFFFF"),
+        fill=PatternFill(bgColor="374151"),
+        font=Font(name="Arial", size=9, bold=True, color="374151"),
     )
-    ws.conditional_formatting.add(gantt_range, rule_gantt)
+    rule_detail = FormulaRule(
+        formula=[f'AND({first_week_col}10>0,ISTEXT($A10))'],
+        stopIfTrue=True,
+        fill=PatternFill(bgColor="D97706"),
+        font=Font(name="Arial", size=9, bold=True, color="D97706"),
+    )
+    ws.conditional_formatting.add(gantt_range, rule_chapter)
+    ws.conditional_formatting.add(gantt_range, rule_detail)
+
+    # Presentación de impresión y navegación.
+    ws.freeze_panes = "E10"
+    ws.print_area = f"A1:{get_column_letter(4 + total_weeks)}{r_inv_cum}"
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.column_dimensions["A"].width = 8
+    ws.column_dimensions["B"].width = 52
+    ws.column_dimensions["C"].width = 12
+    ws.column_dimensions["D"].width = 8
+    for w in range(1, total_weeks + 1):
+        ws.column_dimensions[get_column_letter(4 + w)].width = 13
 
 
 def _build_sheet_cronograma_mensual(
@@ -621,6 +859,7 @@ def _build_sheet_cronograma_mensual(
     items: List[Dict[str, Any]],
     total_weeks: int,
     month_ranges: List[Dict[str, Any]],
+    chapter_rows: List[int],
     start_date: date,
     end_date: date,
     budget_name: str,
@@ -631,8 +870,8 @@ def _build_sheet_cronograma_mensual(
     ws.views.sheetView[0].showGridLines = True
 
     # Encabezado
-    ws["A1"] = contractor_name
-    ws["A1"].font = FONT_SUBTITLE
+    ws["C1"] = contractor_name
+    ws["C1"].font = FONT_SUBTITLE
     ws["C2"] = budget_name
     ws["C2"].font = FONT_TITLE
     ws["C3"] = f"{location} · Contratante: {contractee_name} · Contratista: {contractor_name}"
@@ -660,14 +899,18 @@ def _build_sheet_cronograma_mensual(
     ws.cell(6, col_tot).fill = FILL_HEADER
     ws.cell(6, col_tot).alignment = ALIGN_RIGHT
 
-    col_pct = 4 + num_months
-    ws.cell(6, col_pct, "Peso %").font = FONT_TH
-    ws.cell(6, col_pct).fill = FILL_HEADER
-    ws.cell(6, col_pct).alignment = ALIGN_RIGHT
+    col_pct_start = col_tot + 1
+    for m_idx, m in enumerate(month_ranges):
+        col_pct = col_pct_start + m_idx
+        c_pct = ws.cell(6, col_pct, f"{m['code'].split('-')[0]} %cap.")
+        c_pct.font = FONT_TH
+        c_pct.fill = FILL_HEADER
+        c_pct.alignment = ALIGN_CENTER
+    col_pct_end = col_pct_start + num_months - 1
 
     # Filas de prorrateo al pie de la hoja para alimentar el SUMPRODUCT
     # Calculamos la posición donde iniciará la tabla auxiliar de fracciones
-    frac_table_start_row = 15 + len(chapters)
+    frac_table_start_row = 15 + len(chapters) + len(month_ranges) + 5
     ws.cell(frac_table_start_row - 2, 2, "Prorrateo de cada semana por mes calendario (días del mes en la semana ÷ días de la semana)").font = FONT_DATA_BOLD
 
     r_sem_desde = frac_table_start_row - 1
@@ -714,7 +957,7 @@ def _build_sheet_cronograma_mensual(
 
     curr_row = 7
     for idx, chap in enumerate(chapters, start=1):
-        cg_row = 9 + idx  # Fila correspondiente en Cronograma General
+        cg_row = chapter_rows[idx - 1] if idx - 1 < len(chapter_rows) else 9 + idx
         ws.cell(curr_row, 1, idx).alignment = ALIGN_CENTER
         ws.cell(curr_row, 2, chap["name"]).alignment = ALIGN_LEFT
 
@@ -727,21 +970,25 @@ def _build_sheet_cronograma_mensual(
             c_m.alignment = ALIGN_RIGHT
             c_m.number_format = FMT_CURRENCY
 
-        # Total fila y porcentaje
+        # Total fila
         first_m_letter = get_column_letter(3)
         last_m_letter = get_column_letter(2 + num_months)
-        subtotal_row = 7 + len(chapters)
 
         c_tot = ws.cell(curr_row, col_tot, f'=SUM({first_m_letter}{curr_row}:{last_m_letter}{curr_row})')
         c_tot.alignment = ALIGN_RIGHT
         c_tot.number_format = FMT_CURRENCY
 
-        c_p = ws.cell(curr_row, col_pct, f'={get_column_letter(col_tot)}{curr_row}/$D${subtotal_row}')
-        c_p.alignment = ALIGN_RIGHT
-        c_p.number_format = FMT_PERCENT
+        for m_idx in range(num_months):
+            c_p = ws.cell(
+                curr_row,
+                col_pct_start + m_idx,
+                f'={get_column_letter(3 + m_idx)}{curr_row}/${get_column_letter(col_tot)}{curr_row}',
+            )
+            c_p.alignment = ALIGN_RIGHT
+            c_p.number_format = FMT_PERCENT
 
         fill = FILL_ZEBRA_EVEN if idx % 2 == 0 else FILL_ZEBRA_ODD
-        for c_idx in range(1, col_pct + 1):
+        for c_idx in range(1, col_pct_end + 1):
             cell = ws.cell(curr_row, c_idx)
             cell.font = FONT_DATA
             cell.border = BORDER_THIN
@@ -753,7 +1000,7 @@ def _build_sheet_cronograma_mensual(
     last_chap_row = curr_row - 1
     r_tot_m = curr_row
 
-    ws.cell(r_tot_m, 2, "TOTAL MENSUAL ($)").font = FONT_TOTAL
+    ws.cell(r_tot_m, 2, "TOTAL MENSUAL ($, sin IVA)").font = FONT_TOTAL
     for m_idx in range(num_months):
         col_idx = 3 + m_idx
         col_letter = get_column_letter(col_idx)
@@ -762,53 +1009,91 @@ def _build_sheet_cronograma_mensual(
 
     tot_letter = get_column_letter(col_tot)
     ws.cell(r_tot_m, col_tot, f'=SUM({tot_letter}7:{tot_letter}{last_chap_row})').number_format = FMT_CURRENCY
-    ws.cell(r_tot_m, col_pct, "100.00%").number_format = FMT_PERCENT
 
-    for c_idx in range(1, col_pct + 1):
+    for c_idx in range(1, col_pct_end + 1):
         ws.cell(r_tot_m, c_idx).font = FONT_TOTAL
         ws.cell(r_tot_m, c_idx).fill = FILL_TOTAL
         ws.cell(r_tot_m, c_idx).border = BORDER_TOTAL
 
-    # Fila: % Mensual Programado
-    curr_row += 1
-    r_pct_m = curr_row
-    ws.cell(r_pct_m, 2, "% MENSUAL PROGRAMADO").font = FONT_DATA_BOLD
+    # Avance físico del mes, acumulado e inversión con IVA.
+    r_fis_m = r_tot_m + 1
+    r_fis_cum_m = r_tot_m + 2
+    r_inv_iva_m = r_tot_m + 3
+    ws.cell(r_fis_m, 2, "Avance físico del mes (% del contrato)")
+    ws.cell(r_fis_cum_m, 2, "Avance físico acumulado (%)")
+    ws.cell(r_inv_iva_m, 2, "Inversión del mes con IVA ($)")
 
+    first_month_letter = get_column_letter(3)
     for m_idx in range(num_months):
         col_idx = 3 + m_idx
         col_letter = get_column_letter(col_idx)
-        c_p = ws.cell(r_pct_m, col_idx, f'={col_letter}{r_tot_m}/${tot_letter}${r_tot_m}')
-        c_p.number_format = FMT_PERCENT
+        ws.cell(r_fis_m, col_idx, f"={col_letter}{r_tot_m}/${tot_letter}${r_tot_m}").number_format = FMT_PERCENT
+        ws.cell(r_fis_cum_m, col_idx, f"=SUM(${first_month_letter}{r_fis_m}:{col_letter}{r_fis_m})").number_format = FMT_PERCENT
+        ws.cell(r_inv_iva_m, col_idx, f"={col_letter}{r_tot_m}*(1+IVA)").number_format = FMT_CURRENCY
 
-    for c_idx in range(1, col_pct + 1):
-        ws.cell(r_pct_m, c_idx).font = FONT_DATA_BOLD
-        ws.cell(r_pct_m, c_idx).fill = FILL_TOTAL
-        ws.cell(r_pct_m, c_idx).border = BORDER_THIN
+    ws.cell(r_fis_m, col_tot, f"={tot_letter}{r_tot_m}/${tot_letter}${r_tot_m}").number_format = FMT_PERCENT
+    ws.cell(r_fis_cum_m, col_tot, f"={tot_letter}{r_fis_m}").number_format = FMT_PERCENT
+    ws.cell(r_inv_iva_m, col_tot, f"={tot_letter}{r_tot_m}*(1+IVA)").number_format = FMT_CURRENCY
 
-    # Fila: Curva S Mensual
-    curr_row += 1
-    r_curva_m = curr_row
-    ws.cell(r_curva_m, 2, "CURVA S MENSUAL (ACUMULADO)").font = Font(name="Arial", size=9, bold=True, color="92400E")
+    for row in (r_fis_m, r_fis_cum_m, r_inv_iva_m):
+        for c_idx in range(1, col_pct_end + 1):
+            ws.cell(row, c_idx).font = FONT_DATA_BOLD
+            ws.cell(row, c_idx).fill = FILL_TOTAL
+            ws.cell(row, c_idx).border = BORDER_THIN
 
-    start_m_letter = get_column_letter(3)
-    for m_idx in range(num_months):
-        col_idx = 3 + m_idx
-        col_letter = get_column_letter(col_idx)
-        c_cm = ws.cell(r_curva_m, col_idx, f'=SUM(${start_m_letter}${r_pct_m}:{col_letter}${r_pct_m})')
-        c_cm.number_format = FMT_PERCENT
-        c_cm.font = Font(name="Arial", size=9, bold=True, color="92400E")
+    # Hitos principales por mes, generados con los capítulos activos.
+    r_hitos_title = r_inv_iva_m + 2
+    ws.cell(r_hitos_title, 2, "HITOS PRINCIPALES POR MES").font = FONT_STATUS
+    ws.merge_cells(start_row=r_hitos_title, start_column=2, end_row=r_hitos_title, end_column=11)
 
-    for c_idx in range(1, col_pct + 1):
-        ws.cell(r_curva_m, c_idx).fill = FILL_CURVE
-        ws.cell(r_curva_m, c_idx).border = BORDER_TOTAL
+    for m_idx, m in enumerate(month_ranges):
+        r_hito = r_hitos_title + 1 + m_idx
+        ws.cell(r_hito, 2, m["label"]).font = FONT_DATA_BOLD
+
+        active = [
+            chap for chap in chapters
+            if chap.get("start_date") and chap.get("end_date")
+            and chap["start_date"] <= m["last_day"]
+            and chap["end_date"] >= m["first_day"]
+        ]
+        starts = [chap["name"] for chap in active if m["first_day"] <= chap["start_date"] <= m["last_day"]]
+        ends = [chap["name"] for chap in active if m["first_day"] <= chap["end_date"] <= m["last_day"]]
+        ongoing = active
+
+        parts = []
+        if starts:
+            parts.append("Inicio: " + "; ".join(starts[:3]))
+        if ends:
+            parts.append("Cierre: " + "; ".join(ends[:3]))
+        if ongoing and not starts and not ends:
+            parts.append("En ejecución: " + "; ".join(ongoing[:4]))
+        text = ". ".join(parts) if parts else "Sin actividades programadas."
+        cell = ws.cell(r_hito, 3, text)
+        cell.font = FONT_DATA
+        cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+        ws.merge_cells(start_row=r_hito, start_column=3, end_row=r_hito, end_column=11)
+        ws.row_dimensions[r_hito].height = 30
 
     # Escala de calor condicional para el cronograma mensual
     if num_months > 0:
-        cs_first_col = get_column_letter(3)
-        cs_last_col = get_column_letter(2 + num_months)
+        cs_first_col = get_column_letter(col_pct_start)
+        cs_last_col = get_column_letter(col_pct_end)
         cs_range = f"{cs_first_col}7:{cs_last_col}{last_chap_row}"
         rule_cs = ColorScaleRule(start_type="min", start_color="FFFFFF", end_type="max", end_color="93C5FD")
         ws.conditional_formatting.add(cs_range, rule_cs)
+
+    ws.freeze_panes = "C7"
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.column_dimensions["A"].width = 6
+    ws.column_dimensions["B"].width = 44
+    for m_idx in range(num_months):
+        ws.column_dimensions[get_column_letter(3 + m_idx)].width = 15
+    ws.column_dimensions[get_column_letter(col_tot)].width = 14
+    for m_idx in range(num_months):
+        ws.column_dimensions[get_column_letter(col_pct_start + m_idx)].width = 13
 
 
 def _auto_adjust_columns(ws: Any) -> None:

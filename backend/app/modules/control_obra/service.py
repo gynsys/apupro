@@ -723,6 +723,19 @@ def get_cronograma_dataset(
         else:
             start_date = date.today()
 
+    if not end_date:
+        from sqlalchemy import func
+
+        from app.modules.control_obra.models import ControlObraPlan
+
+        planned_end = (
+            db.query(func.max(ControlObraPlan.planned_end))
+            .filter(ControlObraPlan.budget_id == budget.id)
+            .scalar()
+        )
+        if planned_end:
+            end_date = planned_end
+
     return build_schedule_dataset(
         items=items,
         start_date=start_date,
