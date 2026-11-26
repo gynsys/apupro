@@ -93,6 +93,7 @@ export default function MedicionesTab({
   budgetId,
   budgetName,
   items = [],
+  savedMeasurementRows = null,
   currency = 'USD',
   modifiedAmount = 0,
   onMeasurementsSaved,
@@ -112,16 +113,20 @@ export default function MedicionesTab({
   const [chapterModalInput, setChapterModalInput] = useState('');
   const [renameChapterTarget, setRenameChapterTarget] = useState(null);
 
-  // Inicializar estado del reducer con partidas del presupuesto y borrador local previo
+  // Inicializar estado del reducer con partidas del presupuesto y respaldo de servidor/localStorage
   const [rowsState, rowsDispatch] = useReducer(rowsReducer, null, () => {
-    let saved = null;
-    try {
-      if (typeof window !== 'undefined' && window.localStorage && budgetId) {
-        const raw = window.localStorage.getItem(`control_obra_mediciones_${budgetId}`);
-        if (raw) saved = JSON.parse(raw);
+    let saved = Array.isArray(savedMeasurementRows) && savedMeasurementRows.length > 0
+      ? savedMeasurementRows
+      : null;
+    if (!saved) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage && budgetId) {
+          const raw = window.localStorage.getItem(`control_obra_mediciones_${budgetId}`);
+          if (raw) saved = JSON.parse(raw);
+        }
+      } catch (_e) {
+        saved = null;
       }
-    } catch (_e) {
-      saved = null;
     }
     const initialRows = buildRowsFromBudgetItems(items, saved);
     const activeChap = items[0]?.chapter || 'GENERAL';
@@ -133,8 +138,9 @@ export default function MedicionesTab({
   const canUndo = (rowsState.history?.length || 0) > 0;
   const canRedo = (rowsState.future?.length || 0) > 0;
 
-  // Sincronizar filas iniciales si items llega asíncronamente
+  // Sincronizar filas iniciales si items o savedMeasurementRows llegan asíncronamente
   const initializedItemsRef = useRef(false);
+  const lastSavedJsonRef = useRef(null);
   useEffect(() => {
     if (!items || items.length === 0 || initializedItemsRef.current) return;
 
@@ -142,12 +148,16 @@ export default function MedicionesTab({
     const hasItemsLoaded = items.some((it) => currentItemIds.has(it.item_id));
 
     if (!hasItemsLoaded) {
-      let saved = null;
-      try {
-        const raw = localStorage.getItem(`control_obra_mediciones_${budgetId}`);
-        if (raw) saved = JSON.parse(raw);
-      } catch (_e) {
-        saved = null;
+      let saved = Array.isArray(savedMeasurementRows) && savedMeasurementRows.length > 0
+        ? savedMeasurementRows
+        : null;
+      if (!saved) {
+        try {
+          const raw = localStorage.getItem(`control_obra_mediciones_${budgetId}`);
+          if (raw) saved = JSON.parse(raw);
+        } catch (_e) {
+          saved = null;
+        }
       }
       const initialRows = buildRowsFromBudgetItems(items, saved);
       rowsDispatch({
@@ -159,7 +169,7 @@ export default function MedicionesTab({
       });
     }
     initializedItemsRef.current = true;
-  }, [items, budgetId, capturedItems]);
+  }, [items, savedMeasurementRows, budgetId, capturedItems]);
 
   // Refs para evitar bucles infinitos de renderizado con onCascadeUpdate
   const onCascadeUpdateRef = useRef(onCascadeUpdate);
@@ -217,28 +227,48 @@ export default function MedicionesTab({
       onCascadeUpdateRef.current(nextTotals);
     }
 
-    // Persistir localmente para no perder trabajo
+    // Persistir localmente para no perder trabajo y sincronizar borrador en BD
     const nonBlank = capturedItems.filter((r) => !isItemEmpty(r));
     if (nonBlank.length > 0 && budgetId) {
+      const serialized = JSON.stringify(nonBlank);
       try {
-        localStorage.setItem(`control_obra_mediciones_${budgetId}`, JSON.stringify(nonBlank));
+        localStorage.setItem(`control_obra_mediciones_${budgetId}`, serialized);
       } catch (_e) {
         // ignore
+      }
+
+      if (lastSavedJsonRef.current === null) {
+        lastSavedJsonRef.current = serialized;
+      } else if (lastSavedJsonRef.current !== serialized) {
+        const timer = setTimeout(() => {
+          lastSavedJsonRef.current = serialized;
+          controlObraService.saveMeasurements(budgetId, { rows: nonBlank }).catch(() => {});
+        }, 1200);
+        return () => clearTimeout(timer);
       }
     }
   }, [capturedItems, items, modifiedAmount, budgetId]);
 
-  // Filtrado de partidas por descripción, código o capítulo
+  // Filtrado de partidas por descripción, código o capítulo (soporta múltiples palabras sin acentos)
   const filteredCapturedItems = useMemo(() => {
-    if (!descriptionFilter.trim()) return capturedItems;
-    const q = descriptionFilter.toLowerCase().trim();
+    const normalizeText = (txt) =>
+      String(txt || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    const terms = normalizeText(descriptionFilter).trim().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return capturedItems;
+
     return capturedItems.filter((it) => {
       if (!it.description && !it.cod_par) return false;
-      return (
-        (it.description || '').toLowerCase().includes(q) ||
-        (it.cod_par || '').toLowerCase().includes(q) ||
-        (it.chapter || '').toLowerCase().includes(q)
+      const partialsText = Array.isArray(it.partials)
+        ? it.partials.map((p) => `${p.description || ''} ${p.observations || ''}`).join(' ')
+        : '';
+      const haystack = normalizeText(
+        `${it.cod_par || ''} ${it.description || ''} ${it.chapter || ''} ${it.observations || ''} ${partialsText}`
       );
+      return terms.every((term) => haystack.includes(term));
     });
   }, [capturedItems, descriptionFilter]);
 
@@ -509,10 +539,13 @@ export default function MedicionesTab({
         items: syncItems,
         entry_date: measurementDate || today(),
         notes: `Mediciones de obra actualizadas (${nonBlank.length} partidas)`,
+        measurement_rows: nonBlank,
       });
 
+      const serialized = JSON.stringify(nonBlank);
+      lastSavedJsonRef.current = serialized;
       try {
-        localStorage.setItem(`control_obra_mediciones_${budgetId}`, JSON.stringify(nonBlank));
+        localStorage.setItem(`control_obra_mediciones_${budgetId}`, serialized);
       } catch (_e) {
         // ignore
       }

@@ -384,6 +384,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   budgetId={budgetId}
                   budgetName={budgetName || data?.budget_name}
                   items={items}
+                  savedMeasurementRows={data?.measurement_rows}
                   currency={currency}
                   modifiedAmount={data.modified_amount}
                   onMeasurementsSaved={load}

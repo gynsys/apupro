@@ -537,24 +537,25 @@ export default function BudgetFromComputosModal({ isOpen, onClose, onCreated, in
     return capturedItems.map((it, idx) => ({ ...it, originalIndex: idx }));
   }, [capturedItems]);
 
-  // Lista filtrada de partidas según el término de búsqueda
+  // Lista filtrada de partidas según el término de búsqueda (soporta múltiples palabras sin acentos)
   const filteredCapturedItems = useMemo(() => {
-    const q = (descriptionFilter || '').trim();
-    if (!q) return itemsWithOriginalIndex;
-    const cleanQ = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const normalizeText = (txt) =>
+      String(txt || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    const terms = normalizeText(descriptionFilter).trim().split(/\s+/).filter(Boolean);
+    if (terms.length === 0) return itemsWithOriginalIndex;
+
     return itemsWithOriginalIndex.filter((it) => {
-      const desc = (it.description || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-      if (desc.includes(cleanQ)) return true;
-      if (it.cod_par && it.cod_par.toLowerCase().includes(cleanQ)) return true;
-      if (it.observations && it.observations.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(cleanQ)) return true;
-      if (it.partials && it.partials.length > 0) {
-        return it.partials.some((p) => {
-          const pDesc = (p.description || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-          const pObs = (p.observations || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-          return pDesc.includes(cleanQ) || pObs.includes(cleanQ);
-        });
-      }
-      return false;
+      const partialsText = Array.isArray(it.partials)
+        ? it.partials.map((p) => `${p.description || ''} ${p.observations || ''}`).join(' ')
+        : '';
+      const haystack = normalizeText(
+        `${it.cod_par || ''} ${it.description || ''} ${it.chapter || ''} ${it.observations || ''} ${partialsText}`
+      );
+      return terms.every((term) => haystack.includes(term));
     });
   }, [itemsWithOriginalIndex, descriptionFilter]);
 

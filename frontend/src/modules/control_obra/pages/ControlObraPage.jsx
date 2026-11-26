@@ -502,6 +502,7 @@ export default function ControlObraPage() {
             budgetId={budgetId}
             budgetName={data?.budget_name}
             items={items}
+            savedMeasurementRows={data?.measurement_rows}
             currency={currency}
             modifiedAmount={data.modified_amount}
             onMeasurementsSaved={load}

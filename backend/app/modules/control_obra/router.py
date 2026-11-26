@@ -25,9 +25,11 @@ from app.modules.control_obra.service import (
     create_progress,
     curve,
     get_cronograma_dataset,
+    get_measurement_rows,
     list_periods,
     load_budget,
     reopen_period,
+    save_measurement_rows,
     save_schedule_weeks,
     set_plan,
     summary,
@@ -63,6 +65,11 @@ class SyncProgressRequest(BaseModel):
     items: List[SyncProgressItem]
     entry_date: date
     notes: str = "Sincronizado desde cómputos"
+    measurement_rows: Optional[List[Dict[str, Any]]] = None
+
+
+class MeasurementSheetSaveRequest(BaseModel):
+    rows: List[Dict[str, Any]]
 
 
 class ModificationLineCreate(BaseModel):
@@ -190,10 +197,35 @@ def sync_progress_endpoint(
             payload.entry_date,
             payload.notes,
             str(current_user.id),
+            measurement_rows=payload.measurement_rows,
         )
     except ControlObraError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return result
+
+
+@router.get("/measurements")
+def get_measurements_endpoint(
+    budget_id: str,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    budget = _budget_or_404(db, budget_id, current_user)
+    return {"rows": get_measurement_rows(db, budget)}
+
+
+@router.put("/measurements")
+def save_measurements_endpoint(
+    budget_id: str,
+    payload: MeasurementSheetSaveRequest,
+    db: Session = Depends(get_db),
+    current_user: ArkoAdmin = Depends(get_current_arko_admin),
+) -> Dict[str, Any]:
+    budget = _budget_or_404(db, budget_id, current_user)
+    try:
+        return save_measurement_rows(db, budget, payload.rows, user_id=str(current_user.id))
+    except ControlObraError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post("/modifications", status_code=status.HTTP_201_CREATED)

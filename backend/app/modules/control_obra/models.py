@@ -114,6 +114,16 @@ class ControlObraPlan(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ControlObraMeasurementSheet(Base):
+    __tablename__ = "control_obra_measurement_sheets"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    budget_id = Column(String, ForeignKey("budgets.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    rows_json = Column(Text, nullable=False, default="[]")
+    updated_by = Column(String(80), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class ControlObraAudit(Base):
     __tablename__ = "control_obra_audit"
 

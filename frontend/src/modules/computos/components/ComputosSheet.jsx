@@ -46,14 +46,6 @@ export default function ComputosSheet({
   const [activeRowId, setActiveRowId] = useState(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
 
-  // Inicializar activeRowId en la primera fila válida
-  useEffect(() => {
-    if (!activeRowId && filteredCapturedItems.length > 0) {
-      const firstValid = filteredCapturedItems.find((r) => !isItemEmpty(r));
-      if (firstValid) setActiveRowId(firstValid.id);
-    }
-  }, [activeRowId, filteredCapturedItems]);
-
   const onToggleSelectMeasurement = useCallback((rowId) => {
     setSelectedMeasurementIds((prev) => {
       const next = new Set(prev);
@@ -155,6 +147,11 @@ export default function ComputosSheet({
       }
     } catch (_e) {}
 
+    // Deseleccionar origen tras copiar para que el usuario pueda elegir el destino limpiamente
+    setSelectedMeasurementIds(new Set());
+    setSelectedDescriptionIds(new Set());
+    setActiveRowId(null);
+
     const partialCount = Array.isArray(firstRow.partials) ? firstRow.partials.length : 0;
     if (copyMode === 'measurements') {
       if (partialCount > 0) {
@@ -202,6 +199,10 @@ export default function ComputosSheet({
         } else {
           toast.success('✓ Descripción pegada.');
         }
+        // Limpiar selección porque ya terminó la operación
+        setActiveRowId(null);
+        setSelectedMeasurementIds(new Set());
+        setSelectedDescriptionIds(new Set());
         return;
       }
 
@@ -210,6 +211,9 @@ export default function ComputosSheet({
           onPasteRows(stored.rows, 'append');
         }
         toast.success(`✓ ${stored.rows.length} partida(s) anexadas.`);
+        setActiveRowId(null);
+        setSelectedMeasurementIds(new Set());
+        setSelectedDescriptionIds(new Set());
         return;
       }
     }
@@ -241,11 +245,17 @@ export default function ComputosSheet({
                 });
                 handleToggleExpandPartials?.(activeRowId);
                 toast.success(`✓ ${partialsFromExcel.length} parciales pegados desde Excel.`);
+                setActiveRowId(null);
+                setSelectedMeasurementIds(new Set());
+                setSelectedDescriptionIds(new Set());
                 return;
               }
             } else if (typeof onPasteRows === 'function') {
               onPasteRows(rows, 'append');
               toast.success(`✓ ${rows.length} partida(s) pegadas.`);
+              setActiveRowId(null);
+              setSelectedMeasurementIds(new Set());
+              setSelectedDescriptionIds(new Set());
               return;
             }
           }

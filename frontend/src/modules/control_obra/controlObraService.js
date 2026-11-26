@@ -34,6 +34,11 @@ export const controlObraService = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
+  getMeasurements: (budgetId) => request(`/budgets/${budgetId}/control-obra/measurements`),
+  saveMeasurements: (budgetId, payload) => request(`/budgets/${budgetId}/control-obra/measurements`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  }),
   createModification: (budgetId, payload) => request(`/budgets/${budgetId}/control-obra/modifications`, {
     method: 'POST',
     body: JSON.stringify(payload),

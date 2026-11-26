@@ -1,6 +1,7 @@
 """Servicio de integración entre la base de datos y el dominio de control de obra."""
 from __future__ import annotations
 
+import json
 import math
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -11,6 +12,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from sqlalchemy.orm import Session, selectinload
 
+from app.db.base import Base
 from app.db.models.budget import Budget, BudgetItem
 from app.modules.control_obra.cronograma_domain import build_schedule_dataset
 from app.modules.control_obra.cronograma_excel import generate_cronograma_workbook
@@ -25,6 +27,7 @@ from app.modules.control_obra.domain import (
 from app.modules.control_obra.models import (
     ControlObraAddendum,
     ControlObraAudit,
+    ControlObraMeasurementSheet,
     ControlObraModification,
     ControlObraModificationItem,
     ControlObraPeriod,
@@ -267,6 +270,7 @@ def summary(db: Session, budget: Budget) -> Dict[str, Any]:
         "financial_percent": _number(data["financial_percent"]),
         "items": items,
         "entries": entry_rows,
+        "measurement_rows": get_measurement_rows(db, budget),
         "modifications": [
             {
                 "id": mod.id,
@@ -867,6 +871,60 @@ def update_progress(
     return row
 
 
+def _ensure_measurement_table(db: Session) -> None:
+    bind = db.get_bind()
+    if bind is not None:
+        Base.metadata.create_all(bind=bind, tables=[ControlObraMeasurementSheet.__table__], checkfirst=True)
+
+
+def get_measurement_rows(db: Session, budget: Budget) -> List[Dict[str, Any]]:
+    """Obtiene la planilla de mediciones (parciales y dimensiones) guardada para la obra."""
+    _ensure_measurement_table(db)
+    sheet = (
+        db.query(ControlObraMeasurementSheet)
+        .filter(ControlObraMeasurementSheet.budget_id == budget.id)
+        .first()
+    )
+    if not sheet or not sheet.rows_json:
+        return []
+    try:
+        parsed = json.loads(sheet.rows_json)
+        return parsed if isinstance(parsed, list) else []
+    except Exception:
+        return []
+
+
+def save_measurement_rows(
+    db: Session,
+    budget: Budget,
+    rows: List[Dict[str, Any]],
+    user_id: str = "",
+) -> Dict[str, Any]:
+    """Guarda en base de datos la planilla completa de mediciones (parciales, dimensiones, notas)."""
+    if not isinstance(rows, list):
+        raise ControlObraError("Formato de mediciones inválido")
+    _ensure_measurement_table(db)
+    serialized = json.dumps(rows, ensure_ascii=False)
+    sheet = (
+        db.query(ControlObraMeasurementSheet)
+        .filter(ControlObraMeasurementSheet.budget_id == budget.id)
+        .first()
+    )
+    if sheet:
+        sheet.rows_json = serialized
+        sheet.updated_by = user_id
+        sheet.updated_at = datetime.utcnow()
+    else:
+        sheet = ControlObraMeasurementSheet(
+            budget_id=budget.id,
+            rows_json=serialized,
+            updated_by=user_id,
+        )
+        db.add(sheet)
+    db.commit()
+    return {"saved_count": len(rows)}
+
+
 def sync_progress(
     db: Session,
     budget: Budget,
@@ -874,18 +932,23 @@ def sync_progress(
     entry_date: date,
     notes: str = "Sincronizado desde cómputos",
     user_id: str = "",
+    measurement_rows: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Lleva cantidades objetivo desde una planilla de cómputos.
 
     No reemplaza el historial: crea un ajuste por la diferencia entre la
     cantidad ejecutada actual y la cantidad objetivo. Si la diferencia es
-    negativa, crea un reverso.
+    negativa, crea un reverso. Además persiste el desglose completo de
+    parciales y mediciones si se incluye ``measurement_rows``.
     """
     if not items:
         raise ControlObraError("No hay cantidades de cómputos para llevar")
     closed = _closed_period_for_date(db, budget, entry_date)
     if closed:
         raise ControlObraError(f"El período '{closed.name}' está cerrado. Reábrelo para sincronizar cómputos.")
+
+    if measurement_rows is not None:
+        save_measurement_rows(db, budget, measurement_rows, user_id=user_id)
 
     entries = (
         db.query(ControlObraProgressEntry)
@@ -923,7 +986,11 @@ def sync_progress(
             f"Cantidad objetivo: {quantity}; ajuste: {difference}", user_id,
         )
         changed += 1
-    if changed == 0:
+    if changed == 0 and measurement_rows is None:
         raise ControlObraError("Las cantidades de cómputos coinciden con el avance registrado")
     db.commit()
-    return {"updated": changed, "entry_date": entry_date.isoformat()}
+    return {
+        "updated": changed,
+        "entry_date": entry_date.isoformat(),
+        "measurements_saved": measurement_rows is not None,
+    }

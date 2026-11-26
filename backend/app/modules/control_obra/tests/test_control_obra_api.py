@@ -26,6 +26,7 @@ from app.db.models.budget import (
 from app.modules.control_obra.models import (
     ControlObraAddendum,
     ControlObraAudit,
+    ControlObraMeasurementSheet,
     ControlObraModification,
     ControlObraModificationItem,
     ControlObraPeriod,
@@ -49,6 +50,7 @@ TABLES = [
     ControlObraPeriod.__table__,
     ControlObraPlan.__table__,
     ControlObraAudit.__table__,
+    ControlObraMeasurementSheet.__table__,
 ]
 
 
