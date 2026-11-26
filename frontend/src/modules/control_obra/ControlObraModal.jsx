@@ -36,6 +36,13 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
   const [planningBusy, setPlanningBusy] = useState(false);
 
   const items = data?.items || [];
+  const itemNumberById = useMemo(() => {
+    const map = new Map();
+    items.forEach((it, idx) => {
+      if (it.item_id) map.set(it.item_id, idx + 1);
+    });
+    return map;
+  }, [items]);
   const currency = data?.currency || 'USD';
   const selectedItem = useMemo(
     () => items.find((item) => item.item_id === modForm.item_id),
@@ -397,6 +404,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   <table className="w-full text-xs">
                     <thead className="bg-slate-100 text-slate-600">
                       <tr>
+                        <th className="px-3 py-2 text-center whitespace-nowrap">N°</th>
                         <th className="px-3 py-2 text-left whitespace-nowrap">Código</th>
                         <th className="px-3 py-2 text-left">Partida</th>
                         <th className="px-3 py-2 text-right whitespace-nowrap">Original</th>
@@ -412,10 +420,11 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item) => {
+                      {items.map((item, itemIdx) => {
                         const state = progress[item.item_id] || {};
                         return (
                           <tr key={item.item_id} className="border-t border-slate-100">
+                            <td className="px-3 py-2 text-center font-bold text-slate-500 whitespace-nowrap">{itemIdx + 1}</td>
                             <td className="px-3 py-2 font-mono whitespace-nowrap">{item.code}</td>
                             <td className="px-3 py-2 max-w-[360px] truncate" title={item.description}>{item.description}</td>
                             <td className="px-3 py-2 text-right whitespace-nowrap">{item.original_quantity} {item.unit}</td>
@@ -460,6 +469,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   <table className="w-full text-xs">
                     <thead className="bg-slate-100 text-slate-600">
                       <tr>
+                        <th className="p-2 text-center whitespace-nowrap">N°</th>
                         <th className="p-2 text-left">Código</th>
                         <th className="p-2 text-left">Partida</th>
                         <th className="p-2 text-right">Cantidad</th>
@@ -469,6 +479,7 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                     <tbody>
                       {(data.entries || []).map((entry) => (
                         <tr key={entry.id} className="border-t border-slate-100">
+                          <td className="p-2 text-center font-bold text-slate-500 whitespace-nowrap">{itemNumberById.get(entry.item_id) ?? '—'}</td>
                           <td className="p-2 font-mono">{entry.code}</td>
                           <td className="p-2 max-w-[380px] truncate" title={entry.description}>{entry.description}</td>
                           <td className="p-2 text-right">{entry.quantity}</td>

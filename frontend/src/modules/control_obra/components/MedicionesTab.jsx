@@ -249,6 +249,11 @@ export default function MedicionesTab({
     }
   }, [capturedItems, items, modifiedAmount, budgetId]);
 
+  const itemsWithOriginalIndex = useMemo(
+    () => capturedItems.map((it, idx) => ({ ...it, originalIndex: idx })),
+    [capturedItems]
+  );
+
   // Filtrado de partidas por descripción, código o capítulo (soporta múltiples palabras sin acentos)
   const filteredCapturedItems = useMemo(() => {
     const normalizeText = (txt) =>
@@ -258,9 +263,9 @@ export default function MedicionesTab({
         .toLowerCase();
 
     const terms = normalizeText(descriptionFilter).trim().split(/\s+/).filter(Boolean);
-    if (terms.length === 0) return capturedItems;
+    if (terms.length === 0) return itemsWithOriginalIndex;
 
-    return capturedItems.filter((it) => {
+    return itemsWithOriginalIndex.filter((it) => {
       if (!it.description && !it.cod_par) return false;
       const partialsText = Array.isArray(it.partials)
         ? it.partials.map((p) => `${p.description || ''} ${p.observations || ''}`).join(' ')
@@ -270,7 +275,7 @@ export default function MedicionesTab({
       );
       return terms.every((term) => haystack.includes(term));
     });
-  }, [capturedItems, descriptionFilter]);
+  }, [itemsWithOriginalIndex, descriptionFilter]);
 
   // Handlers para ComputosSheet
   const handleUpdateItemField = (itemId, field, value) => {

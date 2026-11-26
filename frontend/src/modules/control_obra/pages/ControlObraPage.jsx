@@ -58,6 +58,13 @@ export default function ControlObraPage() {
   const [addendumForm, setAddendumForm] = useState({ amount: '', code: '', description: '' });
 
   const items = data?.items || [];
+  const itemNumberById = useMemo(() => {
+    const map = new Map();
+    items.forEach((it, idx) => {
+      if (it.item_id) map.set(it.item_id, idx + 1);
+    });
+    return map;
+  }, [items]);
   const currency = data?.currency || 'USD';
   const selectedItem = useMemo(
     () => items.find((item) => item.item_id === modForm.item_id),
@@ -515,6 +522,7 @@ export default function ControlObraPage() {
             <table className="w-full text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
+                  <th className="px-3 py-2.5 text-center whitespace-nowrap">N°</th>
                   <th className="px-3 py-2.5 text-left whitespace-nowrap">Código</th>
                   <th className="px-3 py-2.5 text-left">Partida</th>
                   <th className="px-3 py-2.5 text-right whitespace-nowrap">Original</th>
@@ -528,10 +536,11 @@ export default function ControlObraPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((item) => {
+                {items.map((item, itemIdx) => {
                   const state = progress[item.item_id] || {};
                   return (
                     <tr key={item.item_id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-3 py-2 text-center font-bold text-slate-500 whitespace-nowrap">{itemIdx + 1}</td>
                       <td className="px-3 py-2 font-mono font-bold text-slate-600 whitespace-nowrap">{item.code}</td>
                       <td className="px-3 py-2 max-w-[360px] truncate font-medium text-slate-800" title={item.description}>{item.description}</td>
                       <td className="px-3 py-2 text-right whitespace-nowrap">{item.original_quantity} {item.unit}</td>
@@ -582,6 +591,7 @@ export default function ControlObraPage() {
             <table className="w-full text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
+                  <th className="p-3 text-center whitespace-nowrap">N°</th>
                   <th className="p-3 text-left">Código</th>
                   <th className="p-3 text-left">Partida</th>
                   <th className="p-3 text-right">Cantidad</th>
@@ -591,6 +601,7 @@ export default function ControlObraPage() {
               <tbody className="divide-y divide-slate-100">
                 {(data.entries || []).map((entry) => (
                   <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-3 text-center font-bold text-slate-500 whitespace-nowrap">{itemNumberById.get(entry.item_id) ?? '—'}</td>
                     <td className="p-3 font-mono font-bold text-slate-700">{entry.code}</td>
                     <td className="p-3 max-w-[380px] truncate font-medium text-slate-800" title={entry.description}>{entry.description}</td>
                     <td className="p-3 text-right font-mono font-bold text-blue-700">{entry.quantity}</td>
