@@ -582,22 +582,18 @@ export default function ControlObraPage() {
             <table className="w-full text-xs">
               <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
-                  <th className="p-3 text-left">Fecha</th>
                   <th className="p-3 text-left">Código</th>
                   <th className="p-3 text-left">Partida</th>
                   <th className="p-3 text-right">Cantidad</th>
-                  <th className="p-3 text-left">Nota</th>
                   <th className="p-3 text-center">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {(data.entries || []).map((entry) => (
                   <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 font-medium text-slate-600">{entry.entry_date}</td>
                     <td className="p-3 font-mono font-bold text-slate-700">{entry.code}</td>
                     <td className="p-3 max-w-[380px] truncate font-medium text-slate-800" title={entry.description}>{entry.description}</td>
                     <td className="p-3 text-right font-mono font-bold text-blue-700">{entry.quantity}</td>
-                    <td className="p-3 text-slate-600">{entry.notes}</td>
                     <td className="p-3 text-center">
                       <button onClick={() => editProgress(entry)} className="text-blue-600 hover:underline font-bold">
                         Editar

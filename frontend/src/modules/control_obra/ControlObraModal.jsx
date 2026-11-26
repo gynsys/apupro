@@ -460,22 +460,18 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                   <table className="w-full text-xs">
                     <thead className="bg-slate-100 text-slate-600">
                       <tr>
-                        <th className="p-2 text-left">Fecha</th>
                         <th className="p-2 text-left">Código</th>
                         <th className="p-2 text-left">Partida</th>
                         <th className="p-2 text-right">Cantidad</th>
-                        <th className="p-2 text-left">Nota</th>
                         <th className="p-2 text-center">Acción</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(data.entries || []).map((entry) => (
                         <tr key={entry.id} className="border-t border-slate-100">
-                          <td className="p-2">{entry.entry_date}</td>
                           <td className="p-2 font-mono">{entry.code}</td>
                           <td className="p-2 max-w-[380px] truncate" title={entry.description}>{entry.description}</td>
                           <td className="p-2 text-right">{entry.quantity}</td>
-                          <td className="p-2">{entry.notes}</td>
                           <td className="p-2 text-center">
                             <button onClick={() => editProgress(entry)} className="text-blue-600 hover:underline font-semibold">
                               Editar
