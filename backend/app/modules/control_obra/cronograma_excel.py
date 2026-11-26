@@ -222,30 +222,38 @@ def _activity_name(description: str) -> str:
 
 
 def _group_chapter_items(chapter_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Agrupa partidas consecutivas en bloques de actividad para el desglose.
+    """Agrupa partidas consecutivas por actividad y fusiona bloques pequeños.
 
-    El modelo UKATIRA usa pocas filas de detalle por capítulo. Se conserva ese
-    nivel de detalle agrupando las partidas en bloques contiguos de tamaño
-    equilibrado, sin crear una fila por cada partida.
+    Primero respeta los cambios de actividad; luego fusiona los bloques
+    adyacentes más pequeños hasta llegar al nivel de detalle del modelo.
     """
     if not chapter_items:
         return []
 
-    total = len(chapter_items)
-    target_groups = max(1, math.ceil(total / 7))
-    chunk_size = max(1, math.ceil(total / target_groups))
+    # Bloques iniciales por actividad consecutiva.
     groups: List[Dict[str, Any]] = []
+    for item in chapter_items:
+        activity = _activity_name(item.get("description", ""))
+        if groups and groups[-1]["activity"] == activity:
+            groups[-1]["items"].append(item)
+        else:
+            groups.append({"activity": activity, "items": [item]})
 
-    for start in range(0, total, chunk_size):
-        block = chapter_items[start:start + chunk_size]
-        if not block:
-            continue
-        activity_counts: Dict[str, int] = {}
-        for item in block:
-            activity = _activity_name(item.get("description", ""))
-            activity_counts[activity] = activity_counts.get(activity, 0) + 1
-        activity = max(activity_counts, key=activity_counts.get)
-        groups.append({"activity": activity, "items": block})
+    target_groups = max(1, math.ceil(len(chapter_items) / 7))
+    while len(groups) > target_groups:
+        best_index = min(
+            range(len(groups) - 1),
+            key=lambda index: len(groups[index]["items"]) + len(groups[index + 1]["items"]),
+        )
+        left = groups[best_index]
+        right = groups[best_index + 1]
+        merged_items = left["items"] + right["items"]
+        groups[best_index] = {
+            "activity": _activity_name(merged_items[0].get("description", "")),
+            "items": merged_items,
+        }
+        del groups[best_index + 1]
+
     return groups
 
 
@@ -1058,7 +1066,7 @@ def _build_sheet_cronograma_mensual(
         ]
         starts = [chap["name"] for chap in active if m["first_day"] <= chap["start_date"] <= m["last_day"]]
         ends = [chap["name"] for chap in active if m["first_day"] <= chap["end_date"] <= m["last_day"]]
-        ongoing = active
+        ongoing = [chap["name"] for chap in active]
 
         parts = []
         if starts:
