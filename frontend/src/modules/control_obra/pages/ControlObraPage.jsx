@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import { controlObraService } from '../controlObraService';
 import MedicionesTab from '../components/MedicionesTab';
 import CronogramaTab from '../components/CronogramaTab';
+import { buildAvancesMatrix } from '../utils/avancesMatrix';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -58,13 +59,10 @@ export default function ControlObraPage() {
   const [addendumForm, setAddendumForm] = useState({ amount: '', code: '', description: '' });
 
   const items = data?.items || [];
-  const itemNumberById = useMemo(() => {
-    const map = new Map();
-    items.forEach((it, idx) => {
-      if (it.item_id) map.set(it.item_id, idx + 1);
-    });
-    return map;
-  }, [items]);
+  const avancesMatrix = useMemo(
+    () => buildAvancesMatrix(items, data?.entries || []),
+    [items, data?.entries]
+  );
   const currency = data?.currency || 'USD';
   const selectedItem = useMemo(
     () => items.find((item) => item.item_id === modForm.item_id),
@@ -544,7 +542,11 @@ export default function ControlObraPage() {
                       <td className="px-3 py-2 font-mono font-bold text-slate-600 whitespace-nowrap">{item.code}</td>
                       <td className="px-3 py-2 max-w-[360px] truncate font-medium text-slate-800" title={item.description}>{item.description}</td>
                       <td className="px-3 py-2 text-right whitespace-nowrap">{item.original_quantity} {item.unit}</td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap font-bold">{item.current_quantity} {item.unit}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap font-bold">
+                        {Number(item.current_quantity) !== Number(item.original_quantity)
+                          ? `${item.current_quantity} ${item.unit}`
+                          : '—'}
+                      </td>
                       <td className="px-3 py-2 text-right whitespace-nowrap font-bold text-blue-700">{item.executed_quantity} {item.unit}</td>
                       <td className="px-3 py-2 text-right font-bold whitespace-nowrap">{pct(item.physical_percent)}</td>
                       <td className="px-3 py-2 text-right font-bold text-indigo-700 whitespace-nowrap">
@@ -592,29 +594,54 @@ export default function ControlObraPage() {
               <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
                   <th className="p-3 text-center whitespace-nowrap">N°</th>
-                  <th className="p-3 text-left">Código</th>
+                  <th className="p-3 text-left whitespace-nowrap">Código</th>
                   <th className="p-3 text-left">Partida</th>
-                  <th className="p-3 text-right">Cantidad</th>
-                  <th className="p-3 text-center">Acción</th>
+                  <th className="p-3 text-center whitespace-nowrap">Und</th>
+                  {avancesMatrix.dates.map((d, idx) => (
+                    <th key={d} className="p-3 text-right whitespace-nowrap">
+                      <div>Avance {idx + 1}</div>
+                      <div className="text-[10px] font-normal text-slate-500">{d}</div>
+                    </th>
+                  ))}
+                  <th className="p-3 text-right whitespace-nowrap bg-blue-50/70 text-blue-800">Total Ejecutado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(data.entries || []).map((entry) => (
-                  <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 text-center font-bold text-slate-500 whitespace-nowrap">{itemNumberById.get(entry.item_id) ?? '—'}</td>
-                    <td className="p-3 font-mono font-bold text-slate-700">{entry.code}</td>
-                    <td className="p-3 max-w-[380px] truncate font-medium text-slate-800" title={entry.description}>{entry.description}</td>
-                    <td className="p-3 text-right font-mono font-bold text-blue-700">{entry.quantity}</td>
-                    <td className="p-3 text-center">
-                      <button onClick={() => editProgress(entry)} className="text-blue-600 hover:underline font-bold">
-                        Editar
-                      </button>
+                {avancesMatrix.rows.map((row) => (
+                  <tr key={row.item_id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-3 text-center font-bold text-slate-500 whitespace-nowrap">{row.itemNumber}</td>
+                    <td className="p-3 font-mono font-bold text-slate-700 whitespace-nowrap">{row.code}</td>
+                    <td className="p-3 max-w-[380px] truncate font-medium text-slate-800" title={row.description}>{row.description}</td>
+                    <td className="p-3 text-center font-semibold text-slate-500 whitespace-nowrap">{row.unit || '—'}</td>
+                    {avancesMatrix.dates.map((d) => {
+                      const val = row.byDate[d];
+                      const entry = row.entriesByDate[d];
+                      const hasVal = val !== undefined && val !== 0;
+                      return (
+                        <td key={d} className="p-3 text-right font-mono whitespace-nowrap">
+                          {hasVal ? (
+                            <button
+                              type="button"
+                              onClick={() => entry && editProgress(entry)}
+                              className={`font-bold hover:underline ${val < 0 ? 'text-rose-600' : 'text-slate-700'}`}
+                              title={entry ? 'Clic para corregir este avance' : ''}
+                            >
+                              {val > 0 ? val : val}
+                            </button>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="p-3 text-right font-mono font-black text-blue-700 bg-blue-50/30 whitespace-nowrap">
+                      {row.total}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {(data.entries || []).length === 0 && <p className="p-6 text-sm text-slate-400 text-center">Sin avances registrados.</p>}
+            {avancesMatrix.rows.length === 0 && <p className="p-6 text-sm text-slate-400 text-center">Sin avances registrados.</p>}
           </div>
         )}
 

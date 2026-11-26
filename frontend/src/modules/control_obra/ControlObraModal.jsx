@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { controlObraService } from './controlObraService';
 import MedicionesTab from './components/MedicionesTab';
 import CronogramaTab from './components/CronogramaTab';
+import { buildAvancesMatrix } from './utils/avancesMatrix';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -36,13 +37,10 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
   const [planningBusy, setPlanningBusy] = useState(false);
 
   const items = data?.items || [];
-  const itemNumberById = useMemo(() => {
-    const map = new Map();
-    items.forEach((it, idx) => {
-      if (it.item_id) map.set(it.item_id, idx + 1);
-    });
-    return map;
-  }, [items]);
+  const avancesMatrix = useMemo(
+    () => buildAvancesMatrix(items, data?.entries || []),
+    [items, data?.entries]
+  );
   const currency = data?.currency || 'USD';
   const selectedItem = useMemo(
     () => items.find((item) => item.item_id === modForm.item_id),
@@ -428,7 +426,11 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                             <td className="px-3 py-2 font-mono whitespace-nowrap">{item.code}</td>
                             <td className="px-3 py-2 max-w-[360px] truncate" title={item.description}>{item.description}</td>
                             <td className="px-3 py-2 text-right whitespace-nowrap">{item.original_quantity} {item.unit}</td>
-                            <td className="px-3 py-2 text-right whitespace-nowrap">{item.current_quantity} {item.unit}</td>
+                            <td className="px-3 py-2 text-right whitespace-nowrap">
+                              {Number(item.current_quantity) !== Number(item.original_quantity)
+                                ? `${item.current_quantity} ${item.unit}`
+                                : '—'}
+                            </td>
                             <td className="px-3 py-2 text-right whitespace-nowrap">{item.executed_quantity} {item.unit}</td>
                             <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">{pct(item.physical_percent)}</td>
                             <td className="px-3 py-2 text-right font-semibold text-indigo-700 whitespace-nowrap">
@@ -470,29 +472,54 @@ export default function ControlObraModal({ isOpen, onClose, budgetId, budgetName
                     <thead className="bg-slate-100 text-slate-600">
                       <tr>
                         <th className="p-2 text-center whitespace-nowrap">N°</th>
-                        <th className="p-2 text-left">Código</th>
+                        <th className="p-2 text-left whitespace-nowrap">Código</th>
                         <th className="p-2 text-left">Partida</th>
-                        <th className="p-2 text-right">Cantidad</th>
-                        <th className="p-2 text-center">Acción</th>
+                        <th className="p-2 text-center whitespace-nowrap">Und</th>
+                        {avancesMatrix.dates.map((d, idx) => (
+                          <th key={d} className="p-2 text-right whitespace-nowrap">
+                            <div>Avance {idx + 1}</div>
+                            <div className="text-[10px] font-normal text-slate-500">{d}</div>
+                          </th>
+                        ))}
+                        <th className="p-2 text-right whitespace-nowrap bg-blue-50/70 text-blue-800">Total Ejecutado</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(data.entries || []).map((entry) => (
-                        <tr key={entry.id} className="border-t border-slate-100">
-                          <td className="p-2 text-center font-bold text-slate-500 whitespace-nowrap">{itemNumberById.get(entry.item_id) ?? '—'}</td>
-                          <td className="p-2 font-mono">{entry.code}</td>
-                          <td className="p-2 max-w-[380px] truncate" title={entry.description}>{entry.description}</td>
-                          <td className="p-2 text-right">{entry.quantity}</td>
-                          <td className="p-2 text-center">
-                            <button onClick={() => editProgress(entry)} className="text-blue-600 hover:underline font-semibold">
-                              Editar
-                            </button>
+                      {avancesMatrix.rows.map((row) => (
+                        <tr key={row.item_id} className="border-t border-slate-100">
+                          <td className="p-2 text-center font-bold text-slate-500 whitespace-nowrap">{row.itemNumber}</td>
+                          <td className="p-2 font-mono whitespace-nowrap">{row.code}</td>
+                          <td className="p-2 max-w-[380px] truncate" title={row.description}>{row.description}</td>
+                          <td className="p-2 text-center text-slate-500 whitespace-nowrap">{row.unit || '—'}</td>
+                          {avancesMatrix.dates.map((d) => {
+                            const val = row.byDate[d];
+                            const entry = row.entriesByDate[d];
+                            const hasVal = val !== undefined && val !== 0;
+                            return (
+                              <td key={d} className="p-2 text-right font-mono whitespace-nowrap">
+                                {hasVal ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => entry && editProgress(entry)}
+                                    className={`font-semibold hover:underline ${val < 0 ? 'text-rose-600' : 'text-slate-700'}`}
+                                    title={entry ? 'Clic para corregir este avance' : ''}
+                                  >
+                                    {val}
+                                  </button>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="p-2 text-right font-mono font-bold text-blue-700 bg-blue-50/30 whitespace-nowrap">
+                            {row.total}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {(data.entries || []).length === 0 && <p className="p-4 text-sm text-slate-500">Sin avances registrados.</p>}
+                  {avancesMatrix.rows.length === 0 && <p className="p-4 text-sm text-slate-500">Sin avances registrados.</p>}
                 </div>
               )}
 
