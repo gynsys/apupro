@@ -487,6 +487,19 @@ def seed_ukatira_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
         budget: Budget
         if existing:
             budget = existing
+            # Limpiar numeración en capítulos si existía cod_par="CAP-XX"
+            cleaned_chapters = False
+            for bi in existing.items:
+                if bi.is_chapter and (
+                    (bi.cod_par and bi.cod_par.startswith("CAP-"))
+                    or bi.unit == "CAP"
+                ):
+                    bi.cod_par = "CAP"
+                    bi.unit = ""
+                    cleaned_chapters = True
+            if cleaned_chapters:
+                db.commit()
+
             plan_count: int = (
                 db.query(ControlObraPlan)
                 .filter(ControlObraPlan.budget_id == existing.id)
@@ -540,10 +553,10 @@ def seed_ukatira_budget_for_user(db: Session, target_user_id: Any) -> Optional[B
                 chap_item = BudgetItem(
                     id=str(uuid.uuid4()),
                     budget_id=budget.id,
-                    cod_par=f"CAP-{order_cursor:02d}",
+                    cod_par="CAP",
                     cov_par=None,
                     description=chap_name,
-                    unit="CAP",
+                    unit="",
                     quantity=0.0,
                     performance=1.0,
                     order=order_cursor,

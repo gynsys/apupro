@@ -660,7 +660,10 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
 
               {/* Lista editable */}
               <div className="space-y-2">
-                {items.map((item, index) => {
+                {(() => {
+                  let partNumberCounter = 0;
+                  return items.map((item, index) => {
+                  const partNumber = item.is_chapter ? null : ++partNumberCounter;
                   const selectedCandidate = (item.candidates || []).find((candidate) => candidate.cod_par === item.selected);
                   const isGenerated = Boolean(item.generated_data || selectedCandidate?.match_type === 'ai_generated');
                   const isCoveninExact = item.has_covenin_code_match;
@@ -682,12 +685,14 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                           checked={item.include}
                           onChange={(event) => updateItem(index, { include: event.target.checked })}
                           className="mt-1 w-4 h-4 accent-sky-600 cursor-pointer shrink-0"
-                          aria-label={`Incluir partida ${item.row}`}
+                          aria-label={item.is_chapter ? `Incluir capítulo ${item.description}` : `Incluir partida ${partNumber}`}
                         />
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-amber-900/60">#{item.row}</span>
+                            {!item.is_chapter && (
+                              <span className="text-[10px] font-bold text-amber-900/60">#{partNumber}</span>
+                            )}
                             {item.is_chapter ? (
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wide">
                                 Capítulo
@@ -962,7 +967,8 @@ export default function BudgetFileImportModal({ isOpen, file, onClose, onCreated
                       </div>
                     </div>
                   );
-                })}
+                });
+                })()}
               </div>
             </>
           )}
